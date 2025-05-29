@@ -290,6 +290,7 @@ composer pint && composer analyze && composer test
 ### Development Tools
 
 - **[Pest](https://pestphp.com/)** - Testing framework with expressive syntax
+- **[Pest Architecture Testing](https://pestphp.com/docs/arch-testing)** - Architectural constraints and code quality rules
 - **[PHPStan](https://phpstan.org/)** - Static analysis tool for catching bugs
 - **[Laravel Pint](https://laravel.com/docs/pint)** - Code style fixer built on PHP-CS-Fixer
 - **Framework-agnostic** - No Laravel dependencies in the core library
