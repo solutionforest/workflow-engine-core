@@ -88,13 +88,30 @@ final readonly class WorkflowContext
     }
 
     /**
-     * Get all workflow execution data.
+     * Get workflow execution data.
      *
-     * @return array<string, mixed> Complete data array
+     * When called without parameters, returns all data.
+     * When called with a key parameter, returns the specific data value (supports dot notation).
+     *
+     * @param string|null $key Data key (supports dot notation for nested access), or null for all data
+     * @param mixed $default Default value to return if key doesn't exist
+     * @return mixed Complete data array when key is null, or specific value when key is provided
+     *
+     * @example
+     * ```php
+     * $allData = $context->getData();
+     * $user = $context->getData('user');
+     * $userName = $context->getData('user.name');
+     * $email = $context->getData('user.email', 'unknown@example.com');
+     * ```
      */
-    public function getData(): array
+    public function getData(?string $key = null, mixed $default = null): mixed
     {
-        return $this->data;
+        if ($key === null) {
+            return $this->data;
+        }
+
+        return data_get($this->data, $key, $default);
     }
 
     /**

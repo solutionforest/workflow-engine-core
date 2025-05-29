@@ -167,7 +167,7 @@ final class WorkflowBuilder
         string $id,
         string|WorkflowAction $action,
         array $config = [],
-        ?int $timeout = null,
+        string|int|null $timeout = null,
         int $retryAttempts = 0
     ): self {
         if (empty(trim($id))) {
@@ -178,8 +178,19 @@ final class WorkflowBuilder
             throw InvalidWorkflowDefinitionException::invalidRetryAttempts($retryAttempts);
         }
 
-        if ($timeout !== null && $timeout <= 0) {
-            throw InvalidWorkflowDefinitionException::invalidTimeout($timeout);
+        // Validate timeout format if provided
+        if ($timeout !== null) {
+            if (is_string($timeout)) {
+                // Validate the string format and convert to ensure it's valid
+                $timeoutSeconds = $this->parseTimeoutString($timeout);
+                if ($timeoutSeconds <= 0) {
+                    throw InvalidWorkflowDefinitionException::invalidTimeout($timeout);
+                }
+            } else {
+                if ($timeout <= 0) {
+                    throw InvalidWorkflowDefinitionException::invalidTimeout($timeout);
+                }
+            }
         }
 
         // Check for duplicate step IDs
@@ -193,7 +204,7 @@ final class WorkflowBuilder
             'id' => $id,
             'action' => is_string($action) ? $action : $action::class,
             'config' => $config,
-            'timeout' => $timeout,
+            'timeout' => $timeout, // Store original format, not converted
             'retry_attempts' => $retryAttempts,
         ];
 
@@ -217,7 +228,7 @@ final class WorkflowBuilder
     public function startWith(
         string|WorkflowAction $action,
         array $config = [],
-        ?int $timeout = null,
+        string|int|null $timeout = null,
         int $retryAttempts = 0
     ): self {
         $stepId = 'step_'.(count($this->steps) + 1);
@@ -242,7 +253,7 @@ final class WorkflowBuilder
     public function then(
         string|WorkflowAction $action,
         array $config = [],
-        ?int $timeout = null,
+        string|int|null $timeout = null,
         int $retryAttempts = 0
     ): self {
         $stepId = 'step_'.(count($this->steps) + 1);
@@ -459,11 +470,21 @@ final class WorkflowBuilder
         // Convert builder format to Step objects
         $steps = [];
         foreach ($this->steps as $stepData) {
+            // Convert timeout to string format for Step object - keep original format if string, convert integer to string
+            $timeoutString = null;
+            if ($stepData['timeout'] !== null) {
+                if (is_string($stepData['timeout'])) {
+                    $timeoutString = $stepData['timeout']; // Keep original string format
+                } else {
+                    $timeoutString = (string) $stepData['timeout']; // Convert integer to string
+                }
+            }
+
             $steps[] = new Step(
                 id: $stepData['id'],
                 actionClass: $stepData['action'],
                 config: $stepData['config'],
-                timeout: $stepData['timeout'] ? (string) $stepData['timeout'] : null,
+                timeout: $timeoutString,
                 retryAttempts: $stepData['retry_attempts'],
                 conditions: isset($stepData['condition']) ? [$stepData['condition']] : []
             );
@@ -497,6 +518,31 @@ final class WorkflowBuilder
     public static function quick(): QuickWorkflowBuilder
     {
         return new QuickWorkflowBuilder;
+    }
+
+    /**
+     * Convert timeout string to seconds.
+     *
+     * @param string $timeout Timeout string like '30s', '5m', '2h', '1d'
+     * @return int Timeout in seconds
+     *
+     * @throws InvalidWorkflowDefinitionException If format is invalid
+     */
+    private function parseTimeoutString(string $timeout): int
+    {
+        if (! preg_match('/^(\d+)([smhd])$/', $timeout, $matches)) {
+            throw InvalidWorkflowDefinitionException::invalidTimeout($timeout);
+        }
+
+        $value = (int) $matches[1];
+        $unit = $matches[2];
+
+        return match ($unit) {
+            's' => $value,
+            'm' => $value * 60,
+            'h' => $value * 3600,
+            'd' => $value * 86400,
+        };
     }
 }
 
