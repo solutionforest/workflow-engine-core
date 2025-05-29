@@ -23,7 +23,8 @@
         "laravel/pint": "^1.22",
         "phpunit/phpunit": "^10.0",
         "phpstan/phpstan": "^2.0",
-        "pestphp/pest": "^2.0"
+        "pestphp/pest": "^2.0",
+        "pestphp/pest-plugin-arch": "^2.0"
     },
     "autoload": {
         "psr-4": {
@@ -58,7 +59,8 @@
     "config": {
         "sort-packages": true,
         "allow-plugins": {
-            "pestphp/pest-plugin": true
+            "pestphp/pest-plugin": true,
+            "pestphp/pest-plugin-arch": true
         }
     }
 }
