@@ -7,6 +7,13 @@
 
 A powerful, framework-agnostic workflow engine for PHP applications. This core library provides comprehensive workflow definition, execution, and state management capabilities without any framework dependencies.
 
+> ⚠️ **WARNING: DEVELOPMENT STATUS**⚠️ 
+> 
+> This package is currently under active development and is **NOT READY FOR PRODUCTION USE**. 
+> 
+> Features may be incomplete, APIs might change, and there could be breaking changes. Use at your own risk in development environments only.
+
+
 ## 📋 Requirements
 
 - **PHP 8.3+** - Leverages modern PHP features for type safety and performance
