@@ -48,7 +48,7 @@ class StateManager
     /**
      * Create a new state manager.
      *
-     * @param  StorageAdapter  $storage  The storage adapter for workflow persistence
+     * @param StorageAdapter $storage The storage adapter for workflow persistence
      *
      * @example Creating with database storage
      * ```php
@@ -68,7 +68,7 @@ class StateManager
      * Persists the complete workflow instance state including current step,
      * completed steps, data, and metadata to the underlying storage system.
      *
-     * @param  WorkflowInstance  $instance  The workflow instance to save
+     * @param WorkflowInstance $instance The workflow instance to save
      *
      * @throws \Exception If the storage operation fails
      *
@@ -90,7 +90,7 @@ class StateManager
      * Retrieves a complete workflow instance including its definition,
      * current state, execution history, and context data.
      *
-     * @param  string  $instanceId  The workflow instance ID to load
+     * @param string $instanceId The workflow instance ID to load
      * @return WorkflowInstance The loaded workflow instance
      *
      * @throws WorkflowInstanceNotFoundException If the workflow instance doesn't exist
@@ -121,8 +121,8 @@ class StateManager
      * This method handles state transition validation and ensures
      * the change is properly recorded.
      *
-     * @param  WorkflowInstance  $instance  The workflow instance to update
-     * @param  WorkflowState  $newState  The new state to set
+     * @param WorkflowInstance $instance The workflow instance to update
+     * @param WorkflowState $newState The new state to set
      *
      * @throws \Exception If the storage operation fails
      *
@@ -143,8 +143,8 @@ class StateManager
      * Merges new data with existing workflow context and persists
      * the updated instance to storage.
      *
-     * @param  WorkflowInstance  $instance  The workflow instance to update
-     * @param  array<string, mixed>  $data  The data to merge with existing context
+     * @param WorkflowInstance $instance The workflow instance to update
+     * @param array<string, mixed> $data The data to merge with existing context
      *
      * @throws \Exception If the storage operation fails
      *
@@ -168,8 +168,8 @@ class StateManager
      * Updates the workflow's current step pointer and persists the change.
      * This is typically called during step transitions.
      *
-     * @param  WorkflowInstance  $instance  The workflow instance to update
-     * @param  string|null  $stepId  The step ID to set as current (null for no current step)
+     * @param WorkflowInstance $instance The workflow instance to update
+     * @param string|null $stepId The step ID to set as current (null for no current step)
      *
      * @throws \Exception If the storage operation fails
      *
@@ -190,8 +190,8 @@ class StateManager
      * Records step completion in the workflow instance and persists
      * the change to storage. This tracks execution progress.
      *
-     * @param  WorkflowInstance  $instance  The workflow instance
-     * @param  string  $stepId  The ID of the completed step
+     * @param WorkflowInstance $instance The workflow instance
+     * @param string $stepId The ID of the completed step
      *
      * @throws \Exception If the storage operation fails
      *
@@ -212,9 +212,9 @@ class StateManager
      * Records step failure with error details in the workflow instance
      * and persists the change to storage. This maintains error history.
      *
-     * @param  WorkflowInstance  $instance  The workflow instance
-     * @param  string  $stepId  The ID of the failed step
-     * @param  string  $error  The error message describing the failure
+     * @param WorkflowInstance $instance The workflow instance
+     * @param string $stepId The ID of the failed step
+     * @param string $error The error message describing the failure
      *
      * @throws \Exception If the storage operation fails
      *
@@ -239,8 +239,8 @@ class StateManager
      * Updates the workflow with an error message and sets the state to FAILED.
      * This is typically called when a workflow encounters an unrecoverable error.
      *
-     * @param  WorkflowInstance  $instance  The workflow instance
-     * @param  string  $error  The error message describing the failure
+     * @param WorkflowInstance $instance The workflow instance
+     * @param string $error The error message describing the failure
      *
      * @throws \Exception If the storage operation fails
      *
@@ -263,7 +263,7 @@ class StateManager
      * state, workflow name, creation date, etc. The exact criteria supported
      * depend on the storage adapter implementation.
      *
-     * @param  array<string, mixed>  $criteria  Search criteria for filtering instances
+     * @param array<string, mixed> $criteria Search criteria for filtering instances
      * @return WorkflowInstance[] Array of matching workflow instances
      *
      * @throws \Exception If the search operation fails
@@ -287,7 +287,7 @@ class StateManager
      * Permanently removes a workflow instance and all its associated data
      * from the storage system. This operation cannot be undone.
      *
-     * @param  string  $instanceId  The workflow instance ID to delete
+     * @param string $instanceId The workflow instance ID to delete
      *
      * @throws \Exception If the delete operation fails
      *
@@ -307,7 +307,7 @@ class StateManager
      * Verifies whether a workflow instance with the given ID exists
      * without loading the full instance data.
      *
-     * @param  string  $instanceId  The workflow instance ID to check
+     * @param string $instanceId The workflow instance ID to check
      * @return bool True if the instance exists, false otherwise
      *
      * @example Checking instance existence

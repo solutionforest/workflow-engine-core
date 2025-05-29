@@ -51,12 +51,12 @@ final readonly class WorkflowContext
     /**
      * Create a new immutable workflow context.
      *
-     * @param  string  $workflowId  Unique identifier for the workflow definition
-     * @param  string  $stepId  Current step identifier within the workflow
-     * @param  array<string, mixed>  $data  Workflow execution data (JSON-serializable)
-     * @param  array<string, mixed>  $config  Step-specific configuration parameters
-     * @param  WorkflowInstance|null  $instance  Associated workflow instance (if available)
-     * @param  DateTime  $executedAt  Timestamp when this context was created
+     * @param string $workflowId Unique identifier for the workflow definition
+     * @param string $stepId Current step identifier within the workflow
+     * @param array<string, mixed> $data Workflow execution data (JSON-serializable)
+     * @param array<string, mixed> $config Step-specific configuration parameters
+     * @param WorkflowInstance|null $instance Associated workflow instance (if available)
+     * @param DateTime $executedAt Timestamp when this context was created
      */
     public function __construct(
         public string $workflowId,
@@ -115,7 +115,7 @@ final readonly class WorkflowContext
      * The new data is merged with existing data using array_merge, so new keys
      * are added and existing keys are overwritten.
      *
-     * @param  array<string, mixed>  $newData  Data to merge with existing data
+     * @param array<string, mixed> $newData Data to merge with existing data
      * @return static New context instance with merged data
      *
      * @example
@@ -143,8 +143,8 @@ final readonly class WorkflowContext
      *
      * Uses Laravel's data_set helper for setting nested values using dot notation.
      *
-     * @param  string  $key  Data key (supports dot notation for nested access)
-     * @param  mixed  $value  Value to set
+     * @param string $key Data key (supports dot notation for nested access)
+     * @param mixed $value Value to set
      * @return static New context instance with updated data
      *
      * @example
@@ -173,7 +173,7 @@ final readonly class WorkflowContext
      *
      * Uses Laravel's data_get helper for checking nested keys using dot notation.
      *
-     * @param  string  $key  Data key (supports dot notation for nested access)
+     * @param string $key Data key (supports dot notation for nested access)
      * @return bool True if the key exists and has a non-null value
      *
      * @example
@@ -195,8 +195,8 @@ final readonly class WorkflowContext
     /**
      * Get configuration value(s) for the current step.
      *
-     * @param  string|null  $key  Configuration key (supports dot notation), or null for all config
-     * @param  mixed  $default  Default value to return if key doesn't exist
+     * @param string|null $key Configuration key (supports dot notation), or null for all config
+     * @param mixed $default Default value to return if key doesn't exist
      * @return mixed Configuration value or default
      *
      * @example

@@ -76,10 +76,10 @@ final class ActionResult
     /**
      * Create a new action result.
      *
-     * @param  bool  $success  Whether the action execution was successful
-     * @param  string|null  $errorMessage  Error message for failed actions
-     * @param  array<string, mixed>  $data  Result data for successful actions
-     * @param  array<string, mixed>  $metadata  Additional context and debugging information
+     * @param bool $success Whether the action execution was successful
+     * @param string|null $errorMessage Error message for failed actions
+     * @param array<string, mixed> $data Result data for successful actions
+     * @param array<string, mixed> $metadata Additional context and debugging information
      */
     public function __construct(
         private readonly bool $success,
@@ -95,8 +95,8 @@ final class ActionResult
      * action execution. The data array should contain any information
      * that needs to be passed to subsequent workflow steps.
      *
-     * @param  array<string, mixed>  $data  Result data to pass to next steps
-     * @param  array<string, mixed>  $metadata  Additional execution metadata
+     * @param array<string, mixed> $data Result data to pass to next steps
+     * @param array<string, mixed> $metadata Additional execution metadata
      * @return static A successful action result
      *
      * @example Basic success
@@ -127,8 +127,8 @@ final class ActionResult
      * action execution. The error message should be descriptive and
      * helpful for debugging. Metadata can include additional context.
      *
-     * @param  string  $errorMessage  Descriptive error message
-     * @param  array<string, mixed>  $metadata  Additional error context and debugging info
+     * @param string $errorMessage Descriptive error message
+     * @param array<string, mixed> $metadata Additional error context and debugging info
      * @return static A failed action result
      *
      * @example Basic failure
@@ -276,7 +276,7 @@ final class ActionResult
      * Since ActionResult is immutable, this method returns a new instance
      * with the provided metadata merged with the existing metadata.
      *
-     * @param  array<string, mixed>  $metadata  Additional metadata to merge
+     * @param array<string, mixed> $metadata Additional metadata to merge
      * @return static A new ActionResult instance with merged metadata
      *
      * @example Adding metadata
@@ -304,8 +304,8 @@ final class ActionResult
      * Convenience method for adding a single metadata entry. Returns a new
      * ActionResult instance with the additional metadata.
      *
-     * @param  string  $key  The metadata key
-     * @param  mixed  $value  The metadata value
+     * @param string $key The metadata key
+     * @param mixed $value The metadata value
      * @return static A new ActionResult instance with the additional metadata
      *
      * @example Adding single metadata
@@ -356,8 +356,8 @@ final class ActionResult
      * Convenience method for accessing nested data values without
      * manually checking array keys. Returns null if the key doesn't exist.
      *
-     * @param  string  $key  The data key (supports dot notation)
-     * @param  mixed  $default  The default value if key is not found
+     * @param string $key The data key (supports dot notation)
+     * @param mixed $default The default value if key is not found
      * @return mixed The data value or default
      *
      * @example Dot notation access
@@ -385,7 +385,7 @@ final class ActionResult
      * the current result's data with additional data. Only works with
      * successful results.
      *
-     * @param  array<string, mixed>  $additionalData  Data to merge
+     * @param array<string, mixed> $additionalData Data to merge
      * @return static A new successful ActionResult with merged data
      *
      * @throws \LogicException If called on a failed result

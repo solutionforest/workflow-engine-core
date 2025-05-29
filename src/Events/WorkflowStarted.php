@@ -5,7 +5,7 @@ namespace SolutionForest\WorkflowEngine\Events;
 class WorkflowStarted
 {
     /**
-     * @param  array<string, mixed>  $context
+     * @param array<string, mixed> $context
      */
     public function __construct(
         public readonly string $workflowId,

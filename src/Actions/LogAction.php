@@ -44,7 +44,7 @@ class LogAction extends BaseAction
     }
 
     /**
-     * @param  array<string, mixed>  $data
+     * @param array<string, mixed> $data
      */
     private function processMessage(string $message, array $data): string
     {

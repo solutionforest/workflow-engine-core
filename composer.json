@@ -40,8 +40,20 @@
     "scripts": {
         "test": "pest",
         "test:coverage": "pest --coverage",
+        "test:verbose": "pest --verbose",
         "analyze": "phpstan analyse",
-        "pint": "pint"
+        "pint": "pint",
+        "pint:test": "pint --test",
+        "quality": [
+            "@pint",
+            "@analyze",
+            "@test"
+        ],
+        "ci": [
+            "@pint:test",
+            "@analyze",
+            "@test"
+        ]
     },
     "config": {
         "sort-packages": true,

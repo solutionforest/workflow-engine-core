@@ -45,8 +45,8 @@ class SimpleWorkflow
     /**
      * Create a new SimpleWorkflow instance.
      *
-     * @param  StorageAdapter  $storage  Storage adapter for workflow persistence
-     * @param  Dispatcher|null  $eventDispatcher  Optional event dispatcher for workflow events
+     * @param StorageAdapter $storage Storage adapter for workflow persistence
+     * @param Dispatcher|null $eventDispatcher Optional event dispatcher for workflow events
      */
     public function __construct(StorageAdapter $storage, ?EventDispatcher $eventDispatcher = null)
     {
@@ -59,9 +59,9 @@ class SimpleWorkflow
      * Creates a workflow where actions execute one after another
      * in the order they are provided.
      *
-     * @param  string  $name  Workflow name/identifier
-     * @param  array<string>  $actions  Array of action class names
-     * @param  array<string, mixed>  $context  Initial workflow context data
+     * @param string $name Workflow name/identifier
+     * @param array<string> $actions Array of action class names
+     * @param array<string, mixed> $context Initial workflow context data
      * @return string The workflow instance ID
      *
      * @example Sequential workflow
@@ -93,8 +93,8 @@ class SimpleWorkflow
      * Convenience method for executing a single action with
      * the full workflow infrastructure.
      *
-     * @param  string  $actionClass  The action class to execute
-     * @param  array<string, mixed>  $context  Context data for the action
+     * @param string $actionClass The action class to execute
+     * @param array<string, mixed> $context Context data for the action
      * @return string The workflow instance ID
      *
      * @example Single action execution
@@ -142,8 +142,8 @@ class SimpleWorkflow
      * Allows using the full WorkflowBuilder API while still
      * benefiting from the simple execution interface.
      *
-     * @param  WorkflowBuilder  $builder  Configured workflow builder
-     * @param  array<string, mixed>  $context  Initial workflow context
+     * @param WorkflowBuilder $builder Configured workflow builder
+     * @param array<string, mixed> $context Initial workflow context
      * @return string The workflow instance ID
      *
      * @example Custom workflow with builder
@@ -174,7 +174,7 @@ class SimpleWorkflow
      *
      * Convenience method for resuming workflow execution.
      *
-     * @param  string  $instanceId  The workflow instance ID to resume
+     * @param string $instanceId The workflow instance ID to resume
      */
     public function resume(string $instanceId): void
     {
@@ -184,7 +184,7 @@ class SimpleWorkflow
     /**
      * Get the status of a workflow instance.
      *
-     * @param  string  $instanceId  The workflow instance ID
+     * @param string $instanceId The workflow instance ID
      * @return array<string, mixed> Workflow instance status information
      */
     public function getStatus(string $instanceId): array

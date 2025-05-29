@@ -17,11 +17,11 @@ final class StepExecutionException extends WorkflowException
     /**
      * Create a new step execution exception.
      *
-     * @param  string  $message  The error message
-     * @param  Step  $step  The step that failed
-     * @param  WorkflowContext  $context  The execution context
-     * @param  int  $attemptNumber  The current attempt number (for retries)
-     * @param  \Throwable|null  $previous  Previous exception that caused the failure
+     * @param string $message The error message
+     * @param Step $step The step that failed
+     * @param WorkflowContext $context The execution context
+     * @param int $attemptNumber The current attempt number (for retries)
+     * @param \Throwable|null $previous Previous exception that caused the failure
      */
     public function __construct(
         string $message,
@@ -139,9 +139,9 @@ final class StepExecutionException extends WorkflowException
     /**
      * Create an exception for action class not found.
      *
-     * @param  string  $actionClass  The missing action class
-     * @param  Step  $step  The step configuration
-     * @param  WorkflowContext  $context  The execution context
+     * @param string $actionClass The missing action class
+     * @param Step $step The step configuration
+     * @param WorkflowContext $context The execution context
      */
     public static function actionClassNotFound(
         string $actionClass,
@@ -159,9 +159,9 @@ final class StepExecutionException extends WorkflowException
     /**
      * Create an exception for invalid action class.
      *
-     * @param  string  $actionClass  The invalid action class
-     * @param  Step  $step  The step configuration
-     * @param  WorkflowContext  $context  The execution context
+     * @param string $actionClass The invalid action class
+     * @param Step $step The step configuration
+     * @param WorkflowContext $context The execution context
      */
     public static function invalidActionClass(
         string $actionClass,
@@ -179,9 +179,9 @@ final class StepExecutionException extends WorkflowException
     /**
      * Create an exception for timeout.
      *
-     * @param  int  $timeout  The timeout duration in seconds
-     * @param  Step  $step  The step configuration
-     * @param  WorkflowContext  $context  The execution context
+     * @param int $timeout The timeout duration in seconds
+     * @param Step $step The step configuration
+     * @param WorkflowContext $context The execution context
      */
     public static function timeout(
         int $timeout,
@@ -199,9 +199,9 @@ final class StepExecutionException extends WorkflowException
     /**
      * Create a StepExecutionException from any other exception.
      *
-     * @param  \Exception  $exception  The original exception
-     * @param  Step  $step  The step that failed
-     * @param  WorkflowContext  $context  The execution context
+     * @param \Exception $exception The original exception
+     * @param Step $step The step that failed
+     * @param WorkflowContext $context The execution context
      */
     public static function fromException(
         \Exception $exception,
@@ -223,9 +223,9 @@ final class StepExecutionException extends WorkflowException
     /**
      * Create an exception for action execution failure.
      *
-     * @param  string  $errorMessage  The action error message
-     * @param  Step  $step  The step that failed
-     * @param  WorkflowContext  $context  The execution context
+     * @param string $errorMessage The action error message
+     * @param Step $step The step that failed
+     * @param WorkflowContext $context The execution context
      */
     public static function actionFailed(
         string $errorMessage,

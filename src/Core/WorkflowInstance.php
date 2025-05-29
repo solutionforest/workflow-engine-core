@@ -117,12 +117,12 @@ final class WorkflowInstance
     /**
      * Create a new workflow instance.
      *
-     * @param  string  $id  Unique identifier for this workflow instance
-     * @param  WorkflowDefinition  $definition  The workflow definition blueprint
-     * @param  WorkflowState  $state  Initial execution state
-     * @param  array<string, mixed>  $data  Initial workflow data
-     * @param  \DateTime|null  $createdAt  Creation timestamp (defaults to now)
-     * @param  \DateTime|null  $updatedAt  Last update timestamp (defaults to now)
+     * @param string $id Unique identifier for this workflow instance
+     * @param WorkflowDefinition $definition The workflow definition blueprint
+     * @param WorkflowState $state Initial execution state
+     * @param array<string, mixed> $data Initial workflow data
+     * @param \DateTime|null $createdAt Creation timestamp (defaults to now)
+     * @param \DateTime|null $updatedAt Last update timestamp (defaults to now)
      */
     public function __construct(
         private readonly string $id,
@@ -171,7 +171,7 @@ final class WorkflowInstance
     /**
      * Update the workflow execution state.
      *
-     * @param  WorkflowState  $state  The new execution state
+     * @param WorkflowState $state The new execution state
      */
     public function setState(WorkflowState $state): void
     {
@@ -192,7 +192,7 @@ final class WorkflowInstance
     /**
      * Replace the entire workflow data.
      *
-     * @param  array<string, mixed>  $data  The new workflow data
+     * @param array<string, mixed> $data The new workflow data
      */
     public function setData(array $data): void
     {
@@ -203,7 +203,7 @@ final class WorkflowInstance
     /**
      * Merge new data with existing workflow data.
      *
-     * @param  array<string, mixed>  $data  Data to merge
+     * @param array<string, mixed> $data Data to merge
      */
     public function mergeData(array $data): void
     {
@@ -224,7 +224,7 @@ final class WorkflowInstance
     /**
      * Set the current step ID.
      *
-     * @param  string|null  $stepId  The step ID to set as current
+     * @param string|null $stepId The step ID to set as current
      */
     public function setCurrentStepId(?string $stepId): void
     {
@@ -245,7 +245,7 @@ final class WorkflowInstance
     /**
      * Mark a step as completed.
      *
-     * @param  string  $stepId  The step ID to mark as completed
+     * @param string $stepId The step ID to mark as completed
      */
     public function addCompletedStep(string $stepId): void
     {
@@ -268,8 +268,8 @@ final class WorkflowInstance
     /**
      * Record a step failure with error details.
      *
-     * @param  string  $stepId  The step ID that failed
-     * @param  string  $error  The error message or description
+     * @param string $stepId The step ID that failed
+     * @param string $error The error message or description
      */
     public function addFailedStep(string $stepId, string $error): void
     {
@@ -294,7 +294,7 @@ final class WorkflowInstance
     /**
      * Set the overall workflow error message.
      *
-     * @param  string|null  $errorMessage  The error message
+     * @param string|null $errorMessage The error message
      */
     public function setErrorMessage(?string $errorMessage): void
     {
@@ -325,7 +325,7 @@ final class WorkflowInstance
     /**
      * Check if a specific step has been completed.
      *
-     * @param  string  $stepId  The step ID to check
+     * @param string $stepId The step ID to check
      * @return bool True if the step is completed, false otherwise
      */
     public function isStepCompleted(string $stepId): bool
@@ -346,7 +346,7 @@ final class WorkflowInstance
     /**
      * Check if a specific step can be executed now.
      *
-     * @param  string  $stepId  The step ID to check
+     * @param string $stepId The step ID to check
      * @return bool True if the step can be executed, false otherwise
      */
     public function canExecuteStep(string $stepId): bool
@@ -391,8 +391,8 @@ final class WorkflowInstance
     /**
      * Create a workflow instance from an array representation.
      *
-     * @param  array<string, mixed>  $data  Array data to restore from
-     * @param  WorkflowDefinition  $definition  The workflow definition
+     * @param array<string, mixed> $data Array data to restore from
+     * @param WorkflowDefinition $definition The workflow definition
      * @return static Restored workflow instance
      */
     public static function fromArray(array $data, WorkflowDefinition $definition): static

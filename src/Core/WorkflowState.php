@@ -213,7 +213,7 @@ enum WorkflowState: string
      * workflow state machine rules. This helps prevent invalid state
      * changes and ensures workflow integrity.
      *
-     * @param  self  $state  The target state to transition to
+     * @param self $state The target state to transition to
      * @return bool True if the transition is valid, false otherwise
      *
      * @example State transition validation

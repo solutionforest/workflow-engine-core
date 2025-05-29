@@ -75,7 +75,7 @@ class ActionResolver
      * 3. Check custom registered actions
      * 4. Attempt automatic class name construction
      *
-     * @param  string  $actionName  The action name or class to resolve
+     * @param string $actionName The action name or class to resolve
      * @return string The fully qualified action class name
      *
      * @throws InvalidWorkflowDefinitionException If the action cannot be resolved or is invalid
@@ -161,8 +161,8 @@ class ActionResolver
      * easier reference in workflow definitions. Useful for application-specific
      * actions or third-party action libraries.
      *
-     * @param  string  $name  The short name for the action
-     * @param  string  $className  The fully qualified class name
+     * @param string $name The short name for the action
+     * @param string $className The fully qualified class name
      *
      * @throws InvalidWorkflowDefinitionException If the class doesn't implement WorkflowAction
      *
@@ -197,7 +197,7 @@ class ActionResolver
      *
      * Validates that a given class exists and implements the WorkflowAction interface.
      *
-     * @param  string  $className  The class name to validate
+     * @param string $className The class name to validate
      * @return bool True if the class is a valid action, false otherwise
      *
      * @example Action validation
@@ -286,7 +286,7 @@ class ActionResolver
     /**
      * Check if an action name is registered.
      *
-     * @param  string  $actionName  The action name to check
+     * @param string $actionName The action name to check
      * @return bool True if the action is available, false otherwise
      *
      * @example Check action availability
@@ -313,7 +313,7 @@ class ActionResolver
      * Converts action names from various formats (camelCase, snake_case, kebab-case)
      * to PascalCase for class name construction.
      *
-     * @param  string  $actionName  The action name to normalize
+     * @param string $actionName The action name to normalize
      * @return string The normalized class name part
      *
      * @example Name normalization

@@ -65,8 +65,8 @@ class WorkflowEngine
     /**
      * Create a new workflow engine instance.
      *
-     * @param  StorageAdapter  $storage  The storage adapter for persisting workflow data
-     * @param  EventDispatcher|null  $eventDispatcher  Optional event dispatcher for workflow events
+     * @param StorageAdapter $storage The storage adapter for persisting workflow data
+     * @param EventDispatcher|null $eventDispatcher Optional event dispatcher for workflow events
      *
      * @throws \InvalidArgumentException If the storage adapter is not properly configured
      */
@@ -90,9 +90,9 @@ class WorkflowEngine
      * Creates a new workflow instance, saves it to storage, dispatches a start event,
      * and begins execution of the first step.
      *
-     * @param  string  $workflowId  Unique identifier for this workflow instance
-     * @param  array<string, mixed>  $definition  The workflow definition containing steps and configuration
-     * @param  array<string, mixed>  $context  Initial context data for the workflow
+     * @param string $workflowId Unique identifier for this workflow instance
+     * @param array<string, mixed> $definition The workflow definition containing steps and configuration
+     * @param array<string, mixed> $context Initial context data for the workflow
      * @return string The workflow instance ID
      *
      * @throws InvalidWorkflowDefinitionException If the workflow definition is invalid
@@ -150,7 +150,7 @@ class WorkflowEngine
      * Loads the workflow instance from storage and continues execution
      * from where it left off. Only works for workflows in PENDING or FAILED state.
      *
-     * @param  string  $instanceId  The workflow instance ID to resume
+     * @param string $instanceId The workflow instance ID to resume
      * @return WorkflowInstance The resumed workflow instance
      *
      * @throws WorkflowInstanceNotFoundException If the workflow instance doesn't exist
@@ -186,7 +186,7 @@ class WorkflowEngine
      * Retrieves the complete workflow instance including its current state,
      * execution history, and context data.
      *
-     * @param  string  $instanceId  The workflow instance ID
+     * @param string $instanceId The workflow instance ID
      * @return WorkflowInstance The workflow instance
      *
      * @throws WorkflowInstanceNotFoundException If the workflow instance doesn't exist
@@ -211,13 +211,13 @@ class WorkflowEngine
      * Retrieves workflow instances based on the provided filters.
      * Useful for building dashboards, monitoring, and reporting.
      *
-     * @param  array<string, mixed>  $filters  Optional filters to apply
-     *                                         - 'state': Filter by workflow state (e.g., 'running', 'completed')
-     *                                         - 'definition_name': Filter by workflow definition name
-     *                                         - 'created_after': Filter by creation date (DateTime or string)
-     *                                         - 'created_before': Filter by creation date (DateTime or string)
-     *                                         - 'limit': Maximum number of results to return
-     *                                         - 'offset': Number of results to skip (for pagination)
+     * @param array<string, mixed> $filters Optional filters to apply
+     *                                      - 'state': Filter by workflow state (e.g., 'running', 'completed')
+     *                                      - 'definition_name': Filter by workflow definition name
+     *                                      - 'created_after': Filter by creation date (DateTime or string)
+     *                                      - 'created_before': Filter by creation date (DateTime or string)
+     *                                      - 'limit': Maximum number of results to return
+     *                                      - 'offset': Number of results to skip (for pagination)
      * @return WorkflowInstance[] Array of workflow instances matching the filters
      *
      * @throws \InvalidArgumentException If invalid filters are provided
@@ -288,7 +288,7 @@ class WorkflowEngine
     /**
      * List workflows with optional filters
      *
-     * @param  array<string, mixed>  $filters
+     * @param array<string, mixed> $filters
      * @return array<int, array<string, mixed>>
      */
     public function listWorkflows(array $filters = []): array

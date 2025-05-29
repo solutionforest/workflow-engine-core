@@ -87,7 +87,7 @@ class DefinitionParser
      * object. Supports both array and JSON string input formats with comprehensive
      * validation and normalization.
      *
-     * @param  array<string, mixed>|string  $definition  Raw workflow definition data
+     * @param array<string, mixed>|string $definition Raw workflow definition data
      * @return WorkflowDefinition Validated and normalized workflow definition
      *
      * @throws InvalidWorkflowDefinitionException If definition structure is invalid
@@ -146,7 +146,7 @@ class DefinitionParser
      * required fields, data types, step validation, and transition validation.
      * Throws detailed exceptions with context for any validation failures.
      *
-     * @param  array<string, mixed>  $definition  The workflow definition to validate
+     * @param array<string, mixed> $definition The workflow definition to validate
      *
      * @throws InvalidWorkflowDefinitionException If any validation rules fail
      *
@@ -221,7 +221,7 @@ class DefinitionParser
      * where step IDs are keys and step configurations are values. Handles both
      * sequential arrays with 'id' properties and pre-normalized associative arrays.
      *
-     * @param  array<int|string, mixed>  $steps  Raw steps array in various formats
+     * @param array<int|string, mixed> $steps Raw steps array in various formats
      * @return array<string, array<string, mixed>> Normalized steps indexed by ID
      *
      * @throws InvalidWorkflowDefinitionException If step structure is invalid
@@ -296,9 +296,9 @@ class DefinitionParser
      * action class validity, timeout format, retry configuration, and
      * other step-specific properties.
      *
-     * @param  string  $stepId  The step identifier
-     * @param  array<string, mixed>  $stepData  The step configuration data
-     * @param  array<string, mixed>  $fullDefinition  Complete workflow definition for context
+     * @param string $stepId The step identifier
+     * @param array<string, mixed> $stepData The step configuration data
+     * @param array<string, mixed> $fullDefinition Complete workflow definition for context
      *
      * @throws InvalidWorkflowDefinitionException If step configuration is invalid
      *
@@ -409,9 +409,9 @@ class DefinitionParser
      * valid steps that exist in the workflow. Validates transition structure
      * and provides detailed error context for debugging.
      *
-     * @param  array<string, mixed>  $transition  The transition definition to validate
-     * @param  array<string, array<string, mixed>>  $steps  Available workflow steps
-     * @param  int  $transitionIndex  Index of transition for error context
+     * @param array<string, mixed> $transition The transition definition to validate
+     * @param array<string, array<string, mixed>> $steps Available workflow steps
+     * @param int $transitionIndex Index of transition for error context
      *
      * @throws InvalidWorkflowDefinitionException If transition is invalid
      *
@@ -532,7 +532,7 @@ class DefinitionParser
      * Checks if a timeout string follows the expected format of a number
      * followed by a time unit (s=seconds, m=minutes, h=hours, d=days).
      *
-     * @param  string  $timeout  The timeout string to validate
+     * @param string $timeout The timeout string to validate
      * @return bool True if format is valid, false otherwise
      *
      * @example Valid timeout formats

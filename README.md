@@ -1,12 +1,18 @@
 # Workflow Engine Core
 
-[![Tests](https://github.com/solution-forest/workflow-engine-core/workflows/run-tests/badge.svg)](https://github.com/solution-forest/workflow-engine-core/actions)
-[![PHPStan](https://github.com/solution-forest/workflow-engine-core/workflows/phpstan/badge.svg)](https://github.com/solution-forest/workflow-engine-core/actions)
+[![Tests](https://github.com/solutionforest/workflow-engine-core/workflows/run-tests/badge.svg)](https://github.com/solution-forest/workflow-engine-core/actions)
+[![PHPStan](https://github.com/solutionforest/workflow-engine-core/workflows/phpstan/badge.svg)](https://github.com/solution-forest/workflow-engine-core/actions)
 [![Latest Stable Version](https://poser.pugx.org/solution-forest/workflow-engine-core/v/stable)](https://packagist.org/packages/solution-forest/workflow-engine-core)
 [![Total Downloads](https://poser.pugx.org/solution-forest/workflow-engine-core/downloads)](https://packagist.org/packages/solution-forest/workflow-engine-core)
 [![License](https://poser.pugx.org/solution-forest/workflow-engine-core/license)](https://packagist.org/packages/solution-forest/workflow-engine-core)
 
 A powerful, framework-agnostic workflow engine for PHP applications. This core library provides comprehensive workflow definition, execution, and state management capabilities without any framework dependencies.
+
+## 📋 Requirements
+
+- **PHP 8.3+** - Leverages modern PHP features for type safety and performance
+- **Composer** - For dependency management
+- **No framework dependencies** - Works with any PHP project
 
 ## ✨ Features
 
@@ -20,11 +26,28 @@ A powerful, framework-agnostic workflow engine for PHP applications. This core l
 - **⏱️ Timeouts**: Step-level timeout controls for reliable execution
 - **📋 Conditions**: Conditional workflow execution based on runtime data
 - **🎯 Events**: Rich event system for monitoring and integration
+- **🧪 Well Tested**: Comprehensive test suite with 160+ assertions
 
 ## 📦 Installation
 
+### For Production Use
+
 ```bash
 composer require solution-forest/workflow-engine-core
+```
+
+### For Development
+
+```bash
+# Clone the repository
+git clone https://github.com/solution-forest/workflow-engine-core.git
+cd workflow-engine-core
+
+# Install dependencies
+composer install
+
+# Run quality checks
+composer ci
 ```
 
 ## 🚀 Quick Start
@@ -226,7 +249,9 @@ class CustomLogger implements Logger
 }
 ```
 
-## 🧪 Testing
+## 🧪 Development
+
+### Testing
 
 Run the test suite:
 
@@ -237,9 +262,54 @@ composer test
 # Run tests with coverage
 composer test:coverage
 
-# Run static analysis
-composer analyze
+# Run specific test file
+vendor/bin/pest tests/Unit/WorkflowEngineTest.php
+
+# Run tests with detailed output
+vendor/bin/pest --verbose
 ```
+
+### Code Quality
+
+We use several tools to maintain high code quality:
+
+```bash
+# Static analysis with PHPStan
+composer analyze
+
+# Code formatting with Laravel Pint
+composer pint
+
+# Check code formatting without making changes
+composer pint --test
+
+# Run all quality checks
+composer pint && composer analyze && composer test
+```
+
+### Development Tools
+
+- **[Pest](https://pestphp.com/)** - Testing framework with expressive syntax
+- **[PHPStan](https://phpstan.org/)** - Static analysis tool for catching bugs
+- **[Laravel Pint](https://laravel.com/docs/pint)** - Code style fixer built on PHP-CS-Fixer
+- **Framework-agnostic** - No Laravel dependencies in the core library
+
+### Configuration Files
+
+- `phpstan.neon.dist` - PHPStan configuration for static analysis
+- `pint.json` - Laravel Pint configuration for code formatting  
+- `phpunit.xml.dist` - PHPUnit configuration for testing
+- `.github/workflows/run-tests.yml` - CI/CD pipeline configuration
+
+### Quality Standards
+
+We maintain high code quality through:
+
+- **100% PHPStan Level 6** - Static analysis with no errors
+- **Laravel Pint** - Consistent code formatting following Laravel standards
+- **Comprehensive Testing** - 40 tests with 160+ assertions covering all core functionality
+- **Type Safety** - Full PHP 8.3+ type declarations and documentation
+- **Continuous Integration** - Automated quality checks on every commit
 
 ## 📚 Framework Integrations
 

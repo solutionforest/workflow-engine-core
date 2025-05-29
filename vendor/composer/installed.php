@@ -1,9 +1,9 @@
 <?php return array(
     'root' => array(
         'name' => 'solution-forest/workflow-engine-core',
-        'pretty_version' => '1.0.0+no-version-set',
-        'version' => '1.0.0.0',
-        'reference' => null,
+        'pretty_version' => 'dev-main',
+        'version' => 'dev-main',
+        'reference' => '6ac8d6b0de334d0e58351bb90eb1c3e0216e6722',
         'type' => 'library',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -182,9 +182,9 @@
             'dev_requirement' => true,
         ),
         'phpstan/phpstan' => array(
-            'pretty_version' => '1.12.27',
-            'version' => '1.12.27.0',
-            'reference' => '3a6e423c076ab39dfedc307e2ac627ef579db162',
+            'pretty_version' => '2.1.17',
+            'version' => '2.1.17.0',
+            'reference' => '89b5ef665716fa2a52ecd2633f21007a6a349053',
             'type' => 'library',
             'install_path' => __DIR__ . '/../phpstan/phpstan',
             'aliases' => array(),
@@ -404,9 +404,9 @@
             'dev_requirement' => true,
         ),
         'solution-forest/workflow-engine-core' => array(
-            'pretty_version' => '1.0.0+no-version-set',
-            'version' => '1.0.0.0',
-            'reference' => null,
+            'pretty_version' => 'dev-main',
+            'version' => 'dev-main',
+            'reference' => '6ac8d6b0de334d0e58351bb90eb1c3e0216e6722',
             'type' => 'library',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),

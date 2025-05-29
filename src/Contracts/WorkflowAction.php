@@ -78,7 +78,7 @@ interface WorkflowAction
      * This is the core method where the action's business logic is implemented.
      * It should perform the intended operation and return an appropriate result.
      *
-     * @param  WorkflowContext  $context  The workflow execution context
+     * @param WorkflowContext $context The workflow execution context
      * @return ActionResult The result of the action execution
      *
      * @throws StepExecutionException When the action fails to execute properly
@@ -106,7 +106,7 @@ interface WorkflowAction
      * It should check prerequisites, validate configuration, and ensure the
      * action can be safely executed.
      *
-     * @param  WorkflowContext  $context  The workflow execution context
+     * @param WorkflowContext $context The workflow execution context
      * @return bool True if the action can be executed, false otherwise
      *
      * @example

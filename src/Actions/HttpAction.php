@@ -90,7 +90,7 @@ class HttpAction extends BaseAction
     }
 
     /**
-     * @param  array<string, mixed>  $data
+     * @param array<string, mixed> $data
      */
     private function processTemplate(string $template, array $data): string
     {
@@ -100,8 +100,8 @@ class HttpAction extends BaseAction
     }
 
     /**
-     * @param  array<string, mixed>  $array
-     * @param  array<string, mixed>  $data
+     * @param array<string, mixed> $array
+     * @param array<string, mixed> $data
      * @return array<string, mixed>
      */
     private function processArrayTemplates(array $array, array $data): array

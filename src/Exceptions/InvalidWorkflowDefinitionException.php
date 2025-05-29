@@ -13,10 +13,10 @@ final class InvalidWorkflowDefinitionException extends WorkflowException
     /**
      * Create a new invalid workflow definition exception.
      *
-     * @param  string  $message  The error message
-     * @param  array<string, mixed>  $definition  The invalid definition that caused the error
-     * @param  string[]  $validationErrors  Specific validation error messages
-     * @param  \Throwable|null  $previous  Previous exception
+     * @param string $message The error message
+     * @param array<string, mixed> $definition The invalid definition that caused the error
+     * @param string[] $validationErrors Specific validation error messages
+     * @param \Throwable|null $previous Previous exception
      */
     public function __construct(
         string $message,
@@ -81,8 +81,8 @@ final class InvalidWorkflowDefinitionException extends WorkflowException
     /**
      * Create an exception for a missing required field.
      *
-     * @param  string  $fieldName  The name of the missing field
-     * @param  array<string, mixed>  $definition  The workflow definition
+     * @param string $fieldName The name of the missing field
+     * @param array<string, mixed> $definition The workflow definition
      */
     public static function missingRequiredField(string $fieldName, array $definition): static
     {
@@ -96,9 +96,9 @@ final class InvalidWorkflowDefinitionException extends WorkflowException
     /**
      * Create an exception for invalid step configuration.
      *
-     * @param  string  $stepId  The step ID with invalid configuration
-     * @param  string  $reason  The reason why the step is invalid
-     * @param  array<string, mixed>  $definition  The workflow definition
+     * @param string $stepId The step ID with invalid configuration
+     * @param string $reason The reason why the step is invalid
+     * @param array<string, mixed> $definition The workflow definition
      */
     public static function invalidStep(string $stepId, string $reason, array $definition): static
     {
@@ -112,7 +112,7 @@ final class InvalidWorkflowDefinitionException extends WorkflowException
     /**
      * Create exception for invalid step ID.
      *
-     * @param  string  $stepId  The invalid step ID
+     * @param string $stepId The invalid step ID
      */
     public static function invalidStepId(string $stepId): static
     {
@@ -130,7 +130,7 @@ final class InvalidWorkflowDefinitionException extends WorkflowException
     /**
      * Create exception for invalid retry attempts.
      *
-     * @param  int  $attempts  The invalid retry attempts value
+     * @param int $attempts The invalid retry attempts value
      */
     public static function invalidRetryAttempts(int $attempts): static
     {
@@ -148,7 +148,7 @@ final class InvalidWorkflowDefinitionException extends WorkflowException
     /**
      * Create exception for invalid timeout.
      *
-     * @param  int|null  $timeout  The invalid timeout value
+     * @param int|null $timeout The invalid timeout value
      */
     public static function invalidTimeout(?int $timeout): static
     {
@@ -166,7 +166,7 @@ final class InvalidWorkflowDefinitionException extends WorkflowException
     /**
      * Create an exception for duplicate step ID.
      *
-     * @param  string  $stepId  The duplicate step ID
+     * @param string $stepId The duplicate step ID
      */
     public static function duplicateStepId(string $stepId): static
     {
@@ -184,8 +184,8 @@ final class InvalidWorkflowDefinitionException extends WorkflowException
     /**
      * Create exception for invalid workflow name.
      *
-     * @param  string  $name  The invalid workflow name
-     * @param  string|null  $reason  Additional reason for the error
+     * @param string $name The invalid workflow name
+     * @param string|null $reason Additional reason for the error
      */
     public static function invalidName(string $name, ?string $reason = null): static
     {
@@ -215,7 +215,7 @@ final class InvalidWorkflowDefinitionException extends WorkflowException
     /**
      * Create exception for invalid condition expression.
      *
-     * @param  string  $condition  The invalid condition expression
+     * @param string $condition The invalid condition expression
      */
     public static function invalidCondition(string $condition): static
     {
@@ -234,9 +234,9 @@ final class InvalidWorkflowDefinitionException extends WorkflowException
     /**
      * Create exception for invalid delay configuration.
      *
-     * @param  int|null  $seconds  Provided seconds value
-     * @param  int|null  $minutes  Provided minutes value
-     * @param  int|null  $hours  Provided hours value
+     * @param int|null $seconds Provided seconds value
+     * @param int|null $minutes Provided minutes value
+     * @param int|null $hours Provided hours value
      */
     public static function invalidDelay(?int $seconds, ?int $minutes, ?int $hours): static
     {
@@ -259,7 +259,7 @@ final class InvalidWorkflowDefinitionException extends WorkflowException
     /**
      * Create exception for empty workflow (no steps defined).
      *
-     * @param  string  $workflowName  The name of the empty workflow
+     * @param string $workflowName The name of the empty workflow
      */
     public static function emptyWorkflow(string $workflowName): static
     {
@@ -278,8 +278,8 @@ final class InvalidWorkflowDefinitionException extends WorkflowException
     /**
      * Create exception for action class not found.
      *
-     * @param  string  $actionName  The missing action name or class
-     * @param  array<string, mixed>  $context  Additional context information
+     * @param string $actionName The missing action name or class
+     * @param array<string, mixed> $context Additional context information
      */
     public static function actionNotFound(string $actionName, array $context = []): static
     {
@@ -317,8 +317,8 @@ final class InvalidWorkflowDefinitionException extends WorkflowException
     /**
      * Create exception for invalid action class (doesn't implement required interface).
      *
-     * @param  string  $className  The invalid action class name
-     * @param  string  $requiredInterface  The required interface
+     * @param string $className The invalid action class name
+     * @param string $requiredInterface The required interface
      */
     public static function invalidActionClass(string $className, string $requiredInterface): static
     {

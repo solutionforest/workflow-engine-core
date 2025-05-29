@@ -86,8 +86,8 @@ abstract class BaseAction implements WorkflowAction
     /**
      * Create a new action instance.
      *
-     * @param  array<string, mixed>  $config  Action-specific configuration
-     * @param  Logger|null  $logger  Optional logger instance (uses NullLogger if not provided)
+     * @param array<string, mixed> $config Action-specific configuration
+     * @param Logger|null $logger Optional logger instance (uses NullLogger if not provided)
      */
     public function __construct(array $config = [], ?Logger $logger = null)
     {
@@ -114,7 +114,7 @@ abstract class BaseAction implements WorkflowAction
      * For custom error handling, override this method or throw
      * StepExecutionException with specific context.
      *
-     * @param  WorkflowContext  $context  The current workflow execution context
+     * @param WorkflowContext $context The current workflow execution context
      * @return ActionResult Success or failure result with data and messages
      *
      * @throws StepExecutionException When action execution fails
@@ -228,7 +228,7 @@ abstract class BaseAction implements WorkflowAction
      * - **External Dependencies**: Test connectivity to external services
      * - **Business Rules**: Apply domain-specific validation logic
      *
-     * @param  WorkflowContext  $context  The current workflow execution context
+     * @param WorkflowContext $context The current workflow execution context
      * @return bool True if the action can be executed, false otherwise
      *
      * @example Data validation
@@ -312,7 +312,7 @@ abstract class BaseAction implements WorkflowAction
      * - **Data Access**: Use context data and action configuration
      * - **Side Effects**: Perform the action's business operations
      *
-     * @param  WorkflowContext  $context  The current workflow execution context
+     * @param WorkflowContext $context The current workflow execution context
      * @return ActionResult The result of the action execution
      *
      * @throws \Exception Any exceptions during action execution
@@ -352,8 +352,8 @@ abstract class BaseAction implements WorkflowAction
      * This is a convenience method for accessing action-specific settings
      * that were provided during action instantiation.
      *
-     * @param  string  $key  The configuration key (supports dot notation)
-     * @param  mixed  $default  The default value if key is not found
+     * @param string $key The configuration key (supports dot notation)
+     * @param mixed $default The default value if key is not found
      * @return mixed The configuration value or default
      *
      * @example Configuration access
@@ -376,7 +376,7 @@ abstract class BaseAction implements WorkflowAction
     /**
      * Get a nested value from an array using dot notation.
      *
-     * @param  array<string, mixed>  $array
+     * @param array<string, mixed> $array
      */
     protected function getNestedValue(array $array, string $key, mixed $default = null): mixed
     {

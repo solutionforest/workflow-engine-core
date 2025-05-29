@@ -16,10 +16,10 @@ final class ActionNotFoundException extends WorkflowException
     /**
      * Create a new action not found exception.
      *
-     * @param  string  $actionClass  The action class that was not found
-     * @param  string  $stepId  The step ID that references this action
-     * @param  string|null  $errorType  The type of error (class_not_found, interface_mismatch, etc.)
-     * @param  \Throwable|null  $previous  Previous exception
+     * @param string $actionClass The action class that was not found
+     * @param string $stepId The step ID that references this action
+     * @param string|null $errorType The type of error (class_not_found, interface_mismatch, etc.)
+     * @param \Throwable|null $previous Previous exception
      */
     public function __construct(
         protected readonly string $actionClass,
@@ -73,7 +73,7 @@ final class ActionNotFoundException extends WorkflowException
     /**
      * Suggest a proper namespace for the action class.
      *
-     * @param  string  $className  The class name to analyze
+     * @param string $className The class name to analyze
      * @return string|null Suggested namespace
      */
     private function suggestNamespace(string $className): ?string
@@ -144,9 +144,9 @@ final class ActionNotFoundException extends WorkflowException
     /**
      * Create exception for action not found errors.
      *
-     * @param  string  $actionClass  The action class that was not found
-     * @param  Step  $step  The step configuration
-     * @param  WorkflowContext  $context  The execution context
+     * @param string $actionClass The action class that was not found
+     * @param Step $step The step configuration
+     * @param WorkflowContext $context The execution context
      */
     public static function actionNotFound(
         string $actionClass,
@@ -159,9 +159,9 @@ final class ActionNotFoundException extends WorkflowException
     /**
      * Create exception for invalid action class.
      *
-     * @param  string  $actionClass  The invalid action class name
-     * @param  Step  $step  The step configuration
-     * @param  WorkflowContext  $context  The execution context
+     * @param string $actionClass The invalid action class name
+     * @param Step $step The step configuration
+     * @param WorkflowContext $context The execution context
      */
     public static function invalidActionClass(
         string $actionClass,
@@ -174,9 +174,9 @@ final class ActionNotFoundException extends WorkflowException
     /**
      * Create an exception for class not found errors.
      *
-     * @param  string  $actionClass  The missing action class name
-     * @param  Step  $step  The step configuration
-     * @param  WorkflowContext  $context  The execution context
+     * @param string $actionClass The missing action class name
+     * @param Step $step The step configuration
+     * @param WorkflowContext $context The execution context
      */
     public static function classNotFound(
         string $actionClass,
@@ -189,9 +189,9 @@ final class ActionNotFoundException extends WorkflowException
     /**
      * Create an exception for an action class with invalid interface.
      *
-     * @param  string  $actionClass  The invalid action class name
-     * @param  Step  $step  The step configuration
-     * @param  WorkflowContext  $context  The execution context
+     * @param string $actionClass The invalid action class name
+     * @param Step $step The step configuration
+     * @param WorkflowContext $context The execution context
      */
     public static function invalidInterface(
         string $actionClass,

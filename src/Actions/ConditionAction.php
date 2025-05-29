@@ -57,7 +57,7 @@ class ConditionAction extends BaseAction
     /**
      * Enhanced condition evaluation with PHP 8.3+ match expressions
      *
-     * @param  array<string, mixed>  $data
+     * @param array<string, mixed> $data
      */
     private function evaluateCondition(string $condition, array $data): bool
     {
@@ -97,7 +97,7 @@ class ConditionAction extends BaseAction
     }
 
     /**
-     * @param  array<string, mixed>  $data
+     * @param array<string, mixed> $data
      */
     private function getValue(string $expression, array $data): mixed
     {

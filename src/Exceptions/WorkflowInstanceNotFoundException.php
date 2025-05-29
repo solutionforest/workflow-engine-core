@@ -13,10 +13,10 @@ final class WorkflowInstanceNotFoundException extends WorkflowException
     /**
      * Create a new workflow instance not found exception.
      *
-     * @param  string  $instanceId  The workflow instance ID that was not found
-     * @param  string|null  $storageType  The storage adapter type being used
-     * @param  array<string, mixed>  $searchFilters  Any filters that were applied during search
-     * @param  \Throwable|null  $previous  Previous exception
+     * @param string $instanceId The workflow instance ID that was not found
+     * @param string|null $storageType The storage adapter type being used
+     * @param array<string, mixed> $searchFilters Any filters that were applied during search
+     * @param \Throwable|null $previous Previous exception
      */
     public function __construct(
         protected readonly string $instanceId,
@@ -116,9 +116,9 @@ final class WorkflowInstanceNotFoundException extends WorkflowException
     /**
      * Create an exception for a malformed instance ID.
      *
-     * @param  string  $instanceId  The malformed instance ID
-     * @param  string  $expectedFormat  Description of the expected format
-     * @param  string|null  $storageType  The storage type being used
+     * @param string $instanceId The malformed instance ID
+     * @param string $expectedFormat Description of the expected format
+     * @param string|null $storageType The storage type being used
      */
     public static function malformedId(
         string $instanceId,
@@ -135,9 +135,9 @@ final class WorkflowInstanceNotFoundException extends WorkflowException
     /**
      * Create an exception for storage connectivity issues.
      *
-     * @param  string  $instanceId  The instance ID that was being searched for
-     * @param  string  $storageType  The storage type that failed
-     * @param  string  $connectionError  The connection error message
+     * @param string $instanceId The instance ID that was being searched for
+     * @param string $storageType The storage type that failed
+     * @param string $connectionError The connection error message
      */
     public static function storageConnectionError(
         string $instanceId,
@@ -154,8 +154,8 @@ final class WorkflowInstanceNotFoundException extends WorkflowException
     /**
      * Create an exception for a workflow instance that was not found.
      *
-     * @param  string  $instanceId  The workflow instance ID that was not found
-     * @param  string|null  $storageType  The storage adapter type
+     * @param string $instanceId The workflow instance ID that was not found
+     * @param string|null $storageType The storage adapter type
      */
     public static function notFound(string $instanceId, ?string $storageType = null): static
     {

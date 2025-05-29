@@ -16,11 +16,11 @@ final class InvalidWorkflowStateException extends WorkflowException
     /**
      * Create a new invalid workflow state exception.
      *
-     * @param  string  $message  The error message
-     * @param  WorkflowState  $currentState  The current workflow state
-     * @param  WorkflowState  $attemptedState  The state that was attempted
-     * @param  string  $instanceId  The workflow instance ID
-     * @param  \Throwable|null  $previous  Previous exception
+     * @param string $message The error message
+     * @param WorkflowState $currentState The current workflow state
+     * @param WorkflowState $attemptedState The state that was attempted
+     * @param string $instanceId The workflow instance ID
+     * @param \Throwable|null $previous Previous exception
      */
     public function __construct(
         string $message,
@@ -74,7 +74,7 @@ final class InvalidWorkflowStateException extends WorkflowException
     /**
      * Get valid state transitions from the current state.
      *
-     * @param  WorkflowState  $state  The state to get transitions for
+     * @param WorkflowState $state The state to get transitions for
      * @return string[] Array of valid state values
      */
     private function getValidTransitions(WorkflowState $state): array
@@ -148,7 +148,7 @@ final class InvalidWorkflowStateException extends WorkflowException
     /**
      * Create an exception for attempting to resume a completed workflow.
      *
-     * @param  string  $instanceId  The workflow instance ID
+     * @param string $instanceId The workflow instance ID
      */
     public static function cannotResumeCompleted(string $instanceId): static
     {
@@ -163,7 +163,7 @@ final class InvalidWorkflowStateException extends WorkflowException
     /**
      * Create an exception for attempting to cancel a failed workflow.
      *
-     * @param  string  $instanceId  The workflow instance ID
+     * @param string $instanceId The workflow instance ID
      */
     public static function cannotCancelFailed(string $instanceId): static
     {
@@ -178,7 +178,7 @@ final class InvalidWorkflowStateException extends WorkflowException
     /**
      * Create an exception for attempting to start an already running workflow.
      *
-     * @param  string  $instanceId  The workflow instance ID
+     * @param string $instanceId The workflow instance ID
      */
     public static function alreadyRunning(string $instanceId): static
     {
@@ -193,9 +193,9 @@ final class InvalidWorkflowStateException extends WorkflowException
     /**
      * Create an exception from a workflow instance with state transition details.
      *
-     * @param  WorkflowInstance  $instance  The workflow instance
-     * @param  WorkflowState  $attemptedState  The attempted state
-     * @param  string  $operation  The operation that was attempted
+     * @param WorkflowInstance $instance The workflow instance
+     * @param WorkflowState $attemptedState The attempted state
+     * @param string $operation The operation that was attempted
      */
     public static function fromInstanceTransition(
         WorkflowInstance $instance,

@@ -69,7 +69,7 @@ final class WorkflowBuilder
     /**
      * Private constructor to enforce factory pattern usage.
      *
-     * @param  string  $name  The workflow name/identifier
+     * @param string $name The workflow name/identifier
      *
      * @throws InvalidWorkflowDefinitionException If name is empty or invalid
      */
@@ -89,7 +89,7 @@ final class WorkflowBuilder
     /**
      * Create a new workflow builder instance.
      *
-     * @param  string  $name  The unique workflow name/identifier
+     * @param string $name The unique workflow name/identifier
      * @return static New builder instance for method chaining
      *
      * @throws InvalidWorkflowDefinitionException If name is invalid
@@ -107,7 +107,7 @@ final class WorkflowBuilder
     /**
      * Set the workflow description for documentation and debugging.
      *
-     * @param  string  $description  Human-readable workflow description
+     * @param string $description Human-readable workflow description
      * @return $this For method chaining
      *
      * @example
@@ -125,7 +125,7 @@ final class WorkflowBuilder
     /**
      * Set the workflow version for change tracking and compatibility.
      *
-     * @param  string  $version  Semantic version string (e.g., "1.0.0", "2.1")
+     * @param string $version Semantic version string (e.g., "1.0.0", "2.1")
      * @return $this For method chaining
      *
      * @example
@@ -143,11 +143,11 @@ final class WorkflowBuilder
     /**
      * Add a workflow step with comprehensive configuration options.
      *
-     * @param  string  $id  Unique step identifier within the workflow
-     * @param  string|WorkflowAction  $action  Action class name or instance
-     * @param  array<string, mixed>  $config  Step-specific configuration parameters
-     * @param  int|null  $timeout  Maximum execution time in seconds
-     * @param  int  $retryAttempts  Number of retry attempts on failure (0-10)
+     * @param string $id Unique step identifier within the workflow
+     * @param string|WorkflowAction $action Action class name or instance
+     * @param array<string, mixed> $config Step-specific configuration parameters
+     * @param int|null $timeout Maximum execution time in seconds
+     * @param int $retryAttempts Number of retry attempts on failure (0-10)
      * @return $this For method chaining
      *
      * @throws InvalidWorkflowDefinitionException If step configuration is invalid
@@ -203,10 +203,10 @@ final class WorkflowBuilder
     /**
      * Add the first step in a workflow (syntactic sugar for better readability).
      *
-     * @param  string|WorkflowAction  $action  Action class name or instance
-     * @param  array<string, mixed>  $config  Step-specific configuration parameters
-     * @param  int|null  $timeout  Maximum execution time in seconds
-     * @param  int  $retryAttempts  Number of retry attempts on failure
+     * @param string|WorkflowAction $action Action class name or instance
+     * @param array<string, mixed> $config Step-specific configuration parameters
+     * @param int|null $timeout Maximum execution time in seconds
+     * @param int $retryAttempts Number of retry attempts on failure
      * @return $this For method chaining
      *
      * @example
@@ -228,10 +228,10 @@ final class WorkflowBuilder
     /**
      * Add a sequential step (syntactic sugar for better readability).
      *
-     * @param  string|WorkflowAction  $action  Action class name or instance
-     * @param  array<string, mixed>  $config  Step-specific configuration parameters
-     * @param  int|null  $timeout  Maximum execution time in seconds
-     * @param  int  $retryAttempts  Number of retry attempts on failure
+     * @param string|WorkflowAction $action Action class name or instance
+     * @param array<string, mixed> $config Step-specific configuration parameters
+     * @param int|null $timeout Maximum execution time in seconds
+     * @param int $retryAttempts Number of retry attempts on failure
      * @return $this For method chaining
      *
      * @example
@@ -253,8 +253,8 @@ final class WorkflowBuilder
     /**
      * Add conditional steps that are only executed when a condition is met.
      *
-     * @param  string  $condition  Condition expression to evaluate (e.g., "user.premium === true")
-     * @param  callable(static): void  $callback  Callback that receives the builder to add conditional steps
+     * @param string $condition Condition expression to evaluate (e.g., "user.premium === true")
+     * @param callable(static): void $callback Callback that receives the builder to add conditional steps
      * @return $this For method chaining
      *
      * @throws InvalidWorkflowDefinitionException If condition is invalid
@@ -288,10 +288,10 @@ final class WorkflowBuilder
     /**
      * Add an email step using pre-configured email action (common pattern).
      *
-     * @param  string  $template  Email template identifier
-     * @param  string  $to  Recipient email address (supports placeholders like "{{ user.email }}")
-     * @param  string  $subject  Email subject line (supports placeholders)
-     * @param  array<string, mixed>  $data  Additional template data
+     * @param string $template Email template identifier
+     * @param string $to Recipient email address (supports placeholders like "{{ user.email }}")
+     * @param string $subject Email subject line (supports placeholders)
+     * @param array<string, mixed> $data Additional template data
      * @return $this For method chaining
      *
      * @example
@@ -325,9 +325,9 @@ final class WorkflowBuilder
     /**
      * Add a delay step to pause workflow execution (common pattern).
      *
-     * @param  int|null  $seconds  Delay in seconds
-     * @param  int|null  $minutes  Delay in minutes (converted to seconds)
-     * @param  int|null  $hours  Delay in hours (converted to seconds)
+     * @param int|null $seconds Delay in seconds
+     * @param int|null $minutes Delay in minutes (converted to seconds)
+     * @param int|null $hours Delay in hours (converted to seconds)
      * @return $this For method chaining
      *
      * @throws InvalidWorkflowDefinitionException If no delay value is provided
@@ -359,10 +359,10 @@ final class WorkflowBuilder
     /**
      * Add an HTTP request step for external API calls (common pattern).
      *
-     * @param  string  $url  Target URL for the HTTP request
-     * @param  string  $method  HTTP method (GET, POST, PUT, DELETE, etc.)
-     * @param  array<string, mixed>  $data  Request payload data
-     * @param  array<string, string>  $headers  Additional HTTP headers
+     * @param string $url Target URL for the HTTP request
+     * @param string $method HTTP method (GET, POST, PUT, DELETE, etc.)
+     * @param array<string, mixed> $data Request payload data
+     * @param array<string, string> $headers Additional HTTP headers
      * @return $this For method chaining
      *
      * @example
@@ -396,7 +396,7 @@ final class WorkflowBuilder
     /**
      * Add a condition check step for workflow branching (common pattern).
      *
-     * @param  string  $condition  Condition expression to evaluate
+     * @param string $condition Condition expression to evaluate
      * @return $this For method chaining
      *
      * @example
@@ -416,7 +416,7 @@ final class WorkflowBuilder
     /**
      * Add custom metadata to the workflow definition.
      *
-     * @param  array<string, mixed>  $metadata  Additional metadata to merge
+     * @param array<string, mixed> $metadata Additional metadata to merge
      * @return $this For method chaining
      *
      * @example
@@ -513,7 +513,7 @@ class QuickWorkflowBuilder
     /**
      * Create a user onboarding workflow with standard steps.
      *
-     * @param  string  $name  Workflow name (defaults to 'user-onboarding')
+     * @param string $name Workflow name (defaults to 'user-onboarding')
      * @return WorkflowBuilder Configured builder ready for customization
      *
      * @example
@@ -541,7 +541,7 @@ class QuickWorkflowBuilder
     /**
      * Create an order processing workflow for e-commerce scenarios.
      *
-     * @param  string  $name  Workflow name (defaults to 'order-processing')
+     * @param string $name Workflow name (defaults to 'order-processing')
      * @return WorkflowBuilder Configured builder ready for customization
      *
      * @example
@@ -571,7 +571,7 @@ class QuickWorkflowBuilder
     /**
      * Create a document approval workflow for content management.
      *
-     * @param  string  $name  Workflow name (defaults to 'document-approval')
+     * @param string $name Workflow name (defaults to 'document-approval')
      * @return WorkflowBuilder Configured builder ready for customization
      *
      * @example

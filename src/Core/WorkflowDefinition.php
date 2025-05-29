@@ -59,11 +59,11 @@ final class WorkflowDefinition
     /**
      * Create a new workflow definition with validation.
      *
-     * @param  string  $name  Unique workflow name/identifier
-     * @param  string  $version  Workflow version for change tracking
-     * @param  array<Step|array<string, mixed>>  $steps  Array of Step objects or step configurations
-     * @param  array<array<string, string>>  $transitions  Array of step transitions
-     * @param  array<string, mixed>  $metadata  Additional workflow metadata
+     * @param string $name Unique workflow name/identifier
+     * @param string $version Workflow version for change tracking
+     * @param array<Step|array<string, mixed>> $steps Array of Step objects or step configurations
+     * @param array<array<string, string>> $transitions Array of step transitions
+     * @param array<string, mixed> $metadata Additional workflow metadata
      *
      * @throws InvalidWorkflowDefinitionException If the definition is invalid
      */
@@ -110,7 +110,7 @@ final class WorkflowDefinition
     /**
      * Get a specific step by its ID.
      *
-     * @param  string  $id  Step identifier
+     * @param string $id Step identifier
      * @return Step|null The step instance, or null if not found
      *
      * @example
@@ -188,8 +188,8 @@ final class WorkflowDefinition
      * Considers transitions and conditional logic to determine which steps
      * should be executed next based on the current workflow state.
      *
-     * @param  string|null  $currentStepId  Current step ID, or null to get first steps
-     * @param  array<string, mixed>  $data  Workflow data for condition evaluation
+     * @param string|null $currentStepId Current step ID, or null to get first steps
+     * @param array<string, mixed> $data Workflow data for condition evaluation
      * @return array<Step> Array of next steps to execute
      *
      * @example
@@ -231,7 +231,7 @@ final class WorkflowDefinition
     /**
      * Check if a step exists in the workflow.
      *
-     * @param  string  $stepId  Step identifier to check
+     * @param string $stepId Step identifier to check
      * @return bool True if the step exists
      */
     public function hasStep(string $stepId): bool
@@ -244,7 +244,7 @@ final class WorkflowDefinition
      *
      * A step is considered the last step if it has no outgoing transitions.
      *
-     * @param  string  $stepId  Step identifier to check
+     * @param string $stepId Step identifier to check
      * @return bool True if this is a terminal step
      *
      * @example
@@ -270,7 +270,7 @@ final class WorkflowDefinition
     /**
      * Process and validate step configurations into Step objects.
      *
-     * @param  array<Step|array<string, mixed>>  $stepsData  Array of Step objects or configurations
+     * @param array<Step|array<string, mixed>> $stepsData Array of Step objects or configurations
      * @return array<string, Step> Processed steps indexed by ID
      *
      * @throws InvalidWorkflowDefinitionException If step configuration is invalid
@@ -314,8 +314,8 @@ final class WorkflowDefinition
     /**
      * Evaluate a condition expression against workflow data.
      *
-     * @param  string  $condition  Condition expression to evaluate
-     * @param  array<string, mixed>  $data  Workflow data for evaluation
+     * @param string $condition Condition expression to evaluate
+     * @param array<string, mixed> $data Workflow data for evaluation
      * @return bool True if condition evaluates to true
      *
      * @internal Used for transition condition evaluation
@@ -323,7 +323,7 @@ final class WorkflowDefinition
     private function evaluateCondition(string $condition, array $data): bool
     {
         // Enhanced condition evaluation with comprehensive operator support
-        if (preg_match('/(\w+(?:\.\w+)*)\s*(===|!==|==|!=|>=|<=|>|<)\s*(.+)/', $condition, $matches)) {
+        if (preg_match('/(\w+(?:\.\w+)*)\s*(===|!==|>=|<=|==|!=|>|<)\s*(.+)/', $condition, $matches)) {
             $key = $matches[1];
             $operator = $matches[2];
             $value = trim($matches[3], '"\'');
@@ -333,12 +333,12 @@ final class WorkflowDefinition
             return match ($operator) {
                 '===' => $dataValue === $value,
                 '!==' => $dataValue !== $value,
+                '>=' => $dataValue >= $value,
+                '<=' => $dataValue <= $value,
                 '==' => $dataValue == $value,
                 '!=' => $dataValue != $value,
                 '>' => $dataValue > $value,
                 '<' => $dataValue < $value,
-                '>=' => $dataValue >= $value,
-                '<=' => $dataValue <= $value,
                 default => false,
             };
         }
@@ -372,7 +372,7 @@ final class WorkflowDefinition
     /**
      * Create a workflow definition from an array representation.
      *
-     * @param  array<string, mixed>  $data  Array representation of workflow definition
+     * @param array<string, mixed> $data Array representation of workflow definition
      * @return static New workflow definition instance
      *
      * @throws InvalidWorkflowDefinitionException If data is invalid
@@ -398,7 +398,7 @@ final class WorkflowDefinition
     /**
      * Get a nested value from an array using dot notation.
      *
-     * @param  array<string, mixed>  $array
+     * @param array<string, mixed> $array
      */
     private function getNestedValue(array $array, string $key, $default = null)
     {

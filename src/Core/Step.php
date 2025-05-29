@@ -55,14 +55,14 @@ class Step
     /**
      * Create a new workflow step with comprehensive configuration.
      *
-     * @param  string  $id  Unique step identifier within the workflow
-     * @param  string|null  $actionClass  Fully qualified action class name
-     * @param  array<string, mixed>  $config  Step-specific configuration parameters
-     * @param  string|null  $timeout  Maximum execution time (in seconds as string)
-     * @param  int  $retryAttempts  Number of retry attempts on failure (0-10)
-     * @param  string|null  $compensationAction  Action class for rollback scenarios
-     * @param  array<string>  $conditions  Array of condition expressions for conditional execution
-     * @param  array<string>  $prerequisites  Array of prerequisite step IDs that must complete first
+     * @param string $id Unique step identifier within the workflow
+     * @param string|null $actionClass Fully qualified action class name
+     * @param array<string, mixed> $config Step-specific configuration parameters
+     * @param string|null $timeout Maximum execution time (in seconds as string)
+     * @param int $retryAttempts Number of retry attempts on failure (0-10)
+     * @param string|null $compensationAction Action class for rollback scenarios
+     * @param array<string> $conditions Array of condition expressions for conditional execution
+     * @param array<string> $prerequisites Array of prerequisite step IDs that must complete first
      */
     public function __construct(
         private readonly string $id,
@@ -181,7 +181,7 @@ class Step
      * Evaluates all condition expressions against the provided data.
      * All conditions must be true for the step to be executable.
      *
-     * @param  array<string, mixed>  $data  Workflow data to evaluate conditions against
+     * @param array<string, mixed> $data Workflow data to evaluate conditions against
      * @return bool True if all conditions pass (or no conditions exist)
      *
      * @example
@@ -212,8 +212,8 @@ class Step
      *
      * Supports basic comparison operators and nested property access using dot notation.
      *
-     * @param  string  $condition  Condition expression (e.g., "user.age >= 18")
-     * @param  array<string, mixed>  $data  Workflow data to evaluate against
+     * @param string $condition Condition expression (e.g., "user.age >= 18")
+     * @param array<string, mixed> $data Workflow data to evaluate against
      * @return bool True if condition evaluates to true
      *
      * @internal This method handles condition parsing and evaluation
@@ -221,7 +221,7 @@ class Step
     private function evaluateCondition(string $condition, array $data): bool
     {
         // Enhanced condition evaluation with support for more operators
-        if (preg_match('/(\w+(?:\.\w+)*)\s*(===|!==|==|!=|>=|<=|>|<)\s*(.+)/', $condition, $matches)) {
+        if (preg_match('/(\w+(?:\.\w+)*)\s*(===|!==|>=|<=|==|!=|>|<)\s*(.+)/', $condition, $matches)) {
             $key = $matches[1];
             $operator = $matches[2];
             $value = trim($matches[3], '"\'');
@@ -231,12 +231,12 @@ class Step
             return match ($operator) {
                 '===' => $dataValue === $value,
                 '!==' => $dataValue !== $value,
+                '>=' => $dataValue >= $value,
+                '<=' => $dataValue <= $value,
                 '==' => $dataValue == $value,
                 '!=' => $dataValue != $value,
                 '>' => $dataValue > $value,
                 '<' => $dataValue < $value,
-                '>=' => $dataValue >= $value,
-                '<=' => $dataValue <= $value,
                 default => false,
             };
         }

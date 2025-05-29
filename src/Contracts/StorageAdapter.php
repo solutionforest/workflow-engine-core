@@ -19,7 +19,7 @@ interface StorageAdapter
     /**
      * Find workflow instances by criteria
      *
-     * @param  array<string, mixed>  $criteria
+     * @param array<string, mixed> $criteria
      * @return array<WorkflowInstance>
      */
     public function findInstances(array $criteria = []): array;
@@ -37,7 +37,7 @@ interface StorageAdapter
     /**
      * Update workflow instance state
      *
-     * @param  array<string, mixed>  $updates
+     * @param array<string, mixed> $updates
      */
     public function updateState(string $id, array $updates): void;
 }

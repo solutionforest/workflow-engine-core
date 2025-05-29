@@ -18,10 +18,10 @@ abstract class WorkflowException extends Exception
     /**
      * Create a new workflow exception with rich context.
      *
-     * @param  string  $message  The error message
-     * @param  array<string, mixed>  $context  Additional context data for debugging
-     * @param  int  $code  The error code (default: 0)
-     * @param  Throwable|null  $previous  The previous throwable used for chaining
+     * @param string $message The error message
+     * @param array<string, mixed> $context Additional context data for debugging
+     * @param int $code The error code (default: 0)
+     * @param Throwable|null $previous The previous throwable used for chaining
      */
     public function __construct(
         string $message,
@@ -48,8 +48,8 @@ abstract class WorkflowException extends Exception
     /**
      * Get a specific context value.
      *
-     * @param  string  $key  The context key to retrieve
-     * @param  mixed  $default  The default value if key doesn't exist
+     * @param string $key The context key to retrieve
+     * @param mixed $default The default value if key doesn't exist
      * @return mixed The context value or default
      */
     public function getContextValue(string $key, mixed $default = null): mixed
@@ -106,9 +106,9 @@ abstract class WorkflowException extends Exception
     /**
      * Create an exception from a workflow context.
      *
-     * @param  string  $message  The error message
-     * @param  WorkflowContext  $context  The workflow context
-     * @param  Throwable|null  $previous  Previous exception
+     * @param string $message The error message
+     * @param WorkflowContext $context The workflow context
+     * @param Throwable|null $previous Previous exception
      * @return static The created exception instance
      */
     public static function fromContext(
@@ -129,9 +129,9 @@ abstract class WorkflowException extends Exception
     /**
      * Create an exception from a workflow instance.
      *
-     * @param  string  $message  The error message
-     * @param  WorkflowInstance  $instance  The workflow instance
-     * @param  Throwable|null  $previous  Previous exception
+     * @param string $message The error message
+     * @param WorkflowInstance $instance The workflow instance
+     * @param Throwable|null $previous Previous exception
      * @return static The created exception instance
      */
     public static function fromInstance(

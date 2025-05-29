@@ -71,9 +71,9 @@ class Executor
     /**
      * Create a new workflow executor.
      *
-     * @param  StateManager  $stateManager  The state manager for workflow persistence
-     * @param  EventDispatcher|null  $eventDispatcher  Optional event dispatcher for workflow events
-     * @param  Logger|null  $logger  Optional logger for workflow execution messages
+     * @param StateManager $stateManager The state manager for workflow persistence
+     * @param EventDispatcher|null $eventDispatcher Optional event dispatcher for workflow events
+     * @param Logger|null $logger Optional logger for workflow execution messages
      *
      * @example Basic setup
      * ```php
@@ -101,7 +101,7 @@ class Executor
      * step execution, error handling, and event dispatching. It processes steps in sequence
      * and manages the workflow lifecycle from start to completion.
      *
-     * @param  WorkflowInstance  $instance  The workflow instance to execute
+     * @param WorkflowInstance $instance The workflow instance to execute
      *
      * @throws StepExecutionException If a step fails during execution
      * @throws ActionNotFoundException If a required action class is not found
@@ -143,7 +143,7 @@ class Executor
      * This private method handles the core workflow processing logic, including
      * state management, step scheduling, and completion detection.
      *
-     * @param  WorkflowInstance  $instance  The workflow instance to process
+     * @param WorkflowInstance $instance The workflow instance to process
      *
      * @throws StepExecutionException If step execution fails
      * @throws ActionNotFoundException If required action classes are missing
@@ -196,8 +196,8 @@ class Executor
      * error handling, state updates, and event dispatching. Provides detailed
      * error context for debugging and monitoring.
      *
-     * @param  WorkflowInstance  $instance  The workflow instance
-     * @param  Step  $step  The step to execute
+     * @param WorkflowInstance $instance The workflow instance
+     * @param Step $step The step to execute
      *
      * @throws StepExecutionException If the step fails to execute
      * @throws ActionNotFoundException If the action class doesn't exist
@@ -275,8 +275,8 @@ class Executor
      * Provides comprehensive error handling for missing classes, interface compliance,
      * and execution failures.
      *
-     * @param  WorkflowInstance  $instance  The workflow instance
-     * @param  Step  $step  The step containing the action to execute
+     * @param WorkflowInstance $instance The workflow instance
+     * @param Step $step The step containing the action to execute
      *
      * @throws ActionNotFoundException If the action class doesn't exist or implement the interface
      * @throws StepExecutionException If action execution fails
