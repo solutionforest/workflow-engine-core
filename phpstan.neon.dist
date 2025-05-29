@@ -1,0 +1,14 @@
+parameters:
+    level: 6
+    paths:
+        - src
+    tmpDir: build/phpstan
+    ignoreErrors:
+        - '#Function (data_get|data_set|class_basename) not found#'
+        - '#Call to static method timeout\(\) on an unknown class Illuminate\\Support\\Facades\\Http#'
+        - '#has no value type specified in iterable type array#'
+        - '#Match arm is unreachable because previous comparison is always true#'
+        - '#has parameter .+ with no type specified#'
+        - '#has no return type specified#'
+        - '#PHPDoc tag @param for parameter .+ with type .+ is not subtype of native type#'
+        - '#Parameter .+ has invalid type#'

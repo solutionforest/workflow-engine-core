@@ -1,0 +1,37 @@
+# Composer Dependencies
+/vendor/
+
+# Build Artifacts
+/build/
+/coverage/
+
+# Test & Cache Files
+.phpunit.cache/
+.phpunit.result.cache
+phpunit.xml
+coverage.xml
+clover.xml
+
+# Static Analysis
+phpstan.neon
+.phpstan-cache/
+
+# IDE Files
+/.idea/
+/.fleet/
+/.vscode/
+_ide_helper.php
+_ide_helper_models.php
+.phpstorm.meta.php
+
+# System Files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Local Configuration
+.env
+.env.local
+
