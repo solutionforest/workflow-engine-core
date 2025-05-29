@@ -153,6 +153,7 @@ final class InvalidWorkflowDefinitionException extends WorkflowException
     public static function invalidTimeout(mixed $timeout): static
     {
         $timeoutStr = $timeout === null ? 'null' : (string) $timeout;
+
         return new self(
             message: "Invalid timeout: {$timeoutStr}. Timeout must be a positive integer, valid time string (e.g., '30s', '5m'), or null.",
             definition: ['provided_timeout' => $timeout],
