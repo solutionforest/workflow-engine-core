@@ -1,10 +1,9 @@
 # Workflow Engine Core
 
-[![Tests](https://github.com/solutionforest/workflow-engine-core/workflows/run-tests/badge.svg)](https://github.com/solution-forest/workflow-engine-core/actions)
-[![PHPStan](https://github.com/solutionforest/workflow-engine-core/workflows/phpstan/badge.svg)](https://github.com/solution-forest/workflow-engine-core/actions)
-[![Latest Stable Version](https://poser.pugx.org/solution-forest/workflow-engine-core/v/stable)](https://packagist.org/packages/solution-forest/workflow-engine-core)
-[![Total Downloads](https://poser.pugx.org/solution-forest/workflow-engine-core/downloads)](https://packagist.org/packages/solution-forest/workflow-engine-core)
-[![License](https://poser.pugx.org/solution-forest/workflow-engine-core/license)](https://packagist.org/packages/solution-forest/workflow-engine-core)
+[![PHPStan](https://img.shields.io/github/actions/workflow/status/solutionforest/workflow-engine-core/phpstan.yml?branch=main&label=phpstan&style=flat-square)](https://github.com/solutionforest/workflow-engine-core/actions?query=workflow%3Aphpstan+branch%3Amain)
+[![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/solutionforest/workflow-engine-core/run-tests.yml?branch=main&label=Test&style=flat-square)](https://github.com/solutionforest/workflow-engine-core/actions?query=workflow%3Arun-tests+branch%3Amain)
+[![GitHub Code Style Action Status](https://img.shields.io/github/actions/workflow/status/solutionforest/workflow-engine-core/fix-php-code-style-issues.yml?branch=main&label=code%20style&style=flat-square)](https://github.com/solutionforest/workflow-engine-core/actions?query=workflow%3A"Fix+PHP+code+style+issues"+branch%3Amain)
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/solution-forest/workflow-engine-core.svg?style=flat-square)](https://packagist.org/packages/solution-forest/workflow-engine-core)
 
 A powerful, framework-agnostic workflow engine for PHP applications. This core library provides comprehensive workflow definition, execution, and state management capabilities without any framework dependencies.
 
