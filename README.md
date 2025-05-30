@@ -179,6 +179,86 @@ The workflow engine follows a clean architecture pattern with clear separation o
 └─────────────────┘    └─────────────────┘
 ```
 
+
+#### 📝 **Workflow Builder**
+- **Purpose**: Fluent interface for creating workflow definitions
+- **Responsibilities**: 
+  - Provides method chaining (`.addStep()`, `.when()`, `.email()`, etc.)
+  - Validates workflow structure during construction
+  - Creates immutable workflow definitions
+  - Supports conditional steps and common patterns
+- **Example**: `WorkflowBuilder::create('user-onboarding')->addStep(...)->build()`
+
+#### 📋 **Workflow Definition**
+- **Purpose**: Immutable data structure representing a complete workflow
+- **Responsibilities**:
+  - Contains workflow metadata (name, description, version)
+  - Stores all steps and their relationships
+  - Defines step execution order and conditions
+  - Serves as a blueprint for workflow execution
+- **Key data**: Steps, transitions, conditions, metadata
+
+#### ⚡ **Workflow Engine**
+- **Purpose**: Central orchestrator that manages workflow execution
+- **Responsibilities**:
+  - Starts new workflow instances from definitions
+  - Manages workflow lifecycle (start, pause, resume, cancel)
+  - Coordinates between different components
+  - Provides API for workflow operations
+- **Main methods**: `start()`, `pause()`, `resume()`, `cancel()`, `getInstance()`
+
+#### 🎯 **Steps & Actions**
+- **Purpose**: Individual workflow tasks and their implementations
+- **Responsibilities**:
+  - **Steps**: Define what should happen (metadata, config, conditions)
+  - **Actions**: Implement the actual business logic (`execute()` method)
+  - Handle step-specific configuration (timeout, retry, conditions)
+  - Support compensation actions for rollback scenarios
+- **Examples**: `SendEmailAction`, `CreateUserAction`, `ValidateOrderAction`
+
+#### 🎬 **Executor**
+- **Purpose**: Runtime engine that executes individual workflow steps
+- **Responsibilities**:
+  - Executes actions in the correct sequence
+  - Handles conditional execution based on workflow context
+  - Manages timeouts and retry logic
+  - Processes step transitions and flow control
+  - Handles errors and compensation
+
+#### 🗄️ **State Manager**
+- **Purpose**: Component responsible for workflow instance state persistence
+- **Responsibilities**:
+  - Saves/loads workflow instances to/from storage
+  - Tracks workflow execution state (running, paused, completed, failed)
+  - Manages workflow context data
+  - Handles state transitions and validation
+  - Supports different storage adapters (database, file, memory)
+
+#### 📡 **Events Dispatcher**
+- **Purpose**: Event system for monitoring and integration
+- **Responsibilities**:
+  - Fires events during workflow execution
+  - Enables workflow monitoring and logging
+  - Supports custom event listeners
+  - Provides hooks for external system integration
+  - Events: `WorkflowStarted`, `StepCompleted`, `WorkflowFailed`, etc.
+
+### 🔄 **Data Flow**
+1. **Builder** → creates → **Definition**
+2. **Engine** → uses **Definition** to create instances
+3. **Engine** → delegates to **Executor** for step execution
+4. **Executor** → runs → **Steps & Actions**
+5. **State Manager** → persists → workflow state
+6. **Events Dispatcher** → broadcasts → execution events
+
+### ✅ **Architecture Benefits**
+- **Separation of concerns** - each component has a single responsibility
+- **Extensibility** - you can swap out storage adapters, add custom actions
+- **Testability** - each component can be tested independently
+- **Framework agnostic** - no dependencies on specific frameworks
+- **Type safety** - full PHP 8.3+ type hints throughout
+
+
 ## 🔧 Configuration
 
 ### Storage Adapters
