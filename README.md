@@ -129,7 +129,9 @@ $workflow = WorkflowBuilder::quick()->documentApproval();
 
 ### PHP 8.3+ Attributes
 
-Use native PHP attributes to configure actions with retry, timeout, and conditions:
+> **Note:** Attributes are currently metadata annotations for documentation and tooling. They are not yet auto-parsed by the engine at runtime — use the builder API (`timeout:`, `retryAttempts:`, `when()`) or step config to apply these behaviors. Attribute-driven execution is planned for a future release.
+
+Use native PHP attributes to annotate actions with retry, timeout, and conditions:
 
 #### Retry Logic
 ```php
@@ -214,14 +216,57 @@ $workflow = WorkflowBuilder::create('conditional-flow')
 ### Workflow Lifecycle Management
 
 ```php
-// Start, pause, resume, cancel
+// Start, resume, cancel
 $instanceId = $engine->start('my-workflow', $definition->toArray(), ['key' => 'value']);
 $instance = $engine->getInstance($instanceId);
+$engine->resume($instanceId);
 $engine->cancel($instanceId, 'No longer needed');
 
-// Query instances
-$instances = $engine->getInstances(['state' => 'running']);
-$status = $engine->getStatus('my-workflow');
+// Track progress
+$progress = $instance->getProgress(); // 0.0 to 100.0
+$summary = $instance->getStatusSummary();
+
+// Query instances with filters
+$instances = $engine->getInstances([
+    'state' => 'running',
+    'definition_name' => 'order-processing',
+    'created_after' => new \DateTime('-7 days'),
+    'limit' => 50,
+    'offset' => 0,
+]);
+```
+
+### SimpleWorkflow Helper
+
+For quick workflow execution without manual engine setup:
+
+```php
+use SolutionForest\WorkflowEngine\Support\SimpleWorkflow;
+
+$simple = new SimpleWorkflow($storageAdapter);
+
+// Run actions sequentially
+$instanceId = $simple->sequential('user-onboarding', [
+    SendWelcomeEmailAction::class,
+    CreateUserProfileAction::class,
+    AssignDefaultRoleAction::class,
+], ['user_id' => 123]);
+
+// Run a single action as a workflow
+$instanceId = $simple->runAction(SendEmailAction::class, [
+    'to' => 'user@example.com',
+    'subject' => 'Welcome!',
+]);
+
+// Execute from a builder
+$builder = WorkflowBuilder::create('custom-flow')
+    ->addStep('validate', ValidateAction::class)
+    ->addStep('process', ProcessAction::class);
+$instanceId = $simple->executeBuilder($builder, $context);
+
+// Check status
+$status = $simple->getStatus($instanceId);
+// Returns: id, state, current_step, progress, completed_steps, failed_steps, error_message, ...
 ```
 
 ## 🏗️ Architecture
@@ -280,6 +325,37 @@ State transitions are validated at runtime — invalid transitions throw `Invali
 | `Exceptions\` | WorkflowException, InvalidWorkflowDefinitionException, InvalidWorkflowStateException, ActionNotFoundException, StepExecutionException, WorkflowInstanceNotFoundException |
 | `Support\` | NullLogger, NullEventDispatcher, SimpleWorkflow, Uuid, Timeout, ConditionEvaluator, Arr |
 
+### Built-in Actions
+
+Six ready-to-use actions are included:
+
+| Action | Purpose | Config Keys |
+|--------|---------|-------------|
+| **LogAction** | Log messages with placeholder replacement (`{user.name}`) | `message`, `level` (debug/info/warning/error) |
+| **EmailAction** | Mock email sending with template support | `to`, `subject`, `body`, `template` |
+| **HttpAction** | HTTP requests with `{{ variable }}` template variables | `url`, `method`, `headers`, `body` |
+| **DelayAction** | Pause execution for a specified duration | `seconds`, `minutes`, `hours` |
+| **ConditionAction** | Evaluate boolean expressions and branch (`on_true`/`on_false`) | `condition`, `on_true`, `on_false` |
+| **BaseAction** | Abstract base class for custom actions | — |
+
+### WorkflowState Helpers
+
+The `WorkflowState` enum provides utility methods for UI and logic:
+
+```php
+$state = $instance->getState();
+
+$state->isActive();        // true for PENDING, RUNNING, WAITING, PAUSED
+$state->isFinished();      // true for COMPLETED, FAILED, CANCELLED
+$state->isSuccessful();    // true for COMPLETED
+$state->isError();         // true for FAILED
+$state->label();           // "Running"
+$state->description();     // "The workflow is actively executing steps..."
+$state->color();           // "blue" (gray, blue, yellow, orange, green, red, purple)
+$state->icon();            // "▶️"
+$state->canTransitionTo(WorkflowState::COMPLETED); // bool
+$state->getValidTransitions(); // [WorkflowState::WAITING, ...]
+```
 
 ## 🔧 Configuration
 
@@ -436,7 +512,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🔗 Links
 
-- [Documentation](https://github.com/solution-forest/workflow-engine-core/docs)
-- [Issues](https://github.com/solution-forest/workflow-engine-core/issues)
-- [Changelog](https://github.com/solution-forest/workflow-engine-core/blob/main/CHANGELOG.md)
-- [Laravel Integration](https://github.com/solution-forest/workflow-engine-laravel)
+- [Issues](https://github.com/solutionforest/workflow-engine-core/issues)
+- [Changelog](https://github.com/solutionforest/workflow-engine-core/blob/main/CHANGELOG.md)
+- [Laravel Integration](https://github.com/solutionforest/workflow-engine-laravel)

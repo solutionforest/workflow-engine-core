@@ -4,15 +4,25 @@ namespace SolutionForest\WorkflowEngine\Events;
 
 use SolutionForest\WorkflowEngine\Core\WorkflowInstance;
 
-class WorkflowFailedEvent
+final readonly class WorkflowFailedEvent
 {
-    public WorkflowInstance $instance;
+    public function __construct(
+        public WorkflowInstance $instance,
+        public \Exception $exception,
+    ) {}
 
-    public \Exception $exception;
-
-    public function __construct(WorkflowInstance $instance, \Exception $exception)
+    public function getWorkflowId(): string
     {
-        $this->instance = $instance;
-        $this->exception = $exception;
+        return $this->instance->getId();
+    }
+
+    public function getWorkflowName(): string
+    {
+        return $this->instance->getDefinition()->getName();
+    }
+
+    public function getErrorMessage(): string
+    {
+        return $this->exception->getMessage();
     }
 }
