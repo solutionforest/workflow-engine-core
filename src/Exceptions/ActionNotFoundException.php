@@ -4,6 +4,7 @@ namespace SolutionForest\WorkflowEngine\Exceptions;
 
 use SolutionForest\WorkflowEngine\Core\Step;
 use SolutionForest\WorkflowEngine\Core\WorkflowContext;
+use SolutionForest\WorkflowEngine\Support\Arr;
 
 /**
  * Thrown when a workflow action class cannot be found or loaded.
@@ -108,7 +109,7 @@ final class ActionNotFoundException extends WorkflowException
         if (! class_exists($this->actionClass)) {
             $suggestions[] = "Ensure the action class '{$this->actionClass}' exists and is properly autoloaded";
 
-            $suggested = $this->suggestNamespace(class_basename($this->actionClass));
+            $suggested = $this->suggestNamespace(Arr::classBasename($this->actionClass));
             if ($suggested) {
                 $suggestions[] = "Did you mean '{$suggested}'?";
             }

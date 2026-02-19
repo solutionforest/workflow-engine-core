@@ -242,8 +242,8 @@ enum WorkflowState: string
     public function canTransitionTo(self $state): bool
     {
         return match ($this) {
-            // From PENDING: can start running or be cancelled
-            self::PENDING => in_array($state, [self::RUNNING, self::CANCELLED]),
+            // From PENDING: can start running, fail, or be cancelled
+            self::PENDING => in_array($state, [self::RUNNING, self::FAILED, self::CANCELLED]),
 
             // From RUNNING: can wait, pause, complete, fail, or be cancelled
             self::RUNNING => in_array($state, [
@@ -257,8 +257,8 @@ enum WorkflowState: string
             // From WAITING: can resume running, fail, or be cancelled
             self::WAITING => in_array($state, [self::RUNNING, self::FAILED, self::CANCELLED]),
 
-            // From PAUSED: can resume running or be cancelled
-            self::PAUSED => in_array($state, [self::RUNNING, self::CANCELLED]),
+            // From PAUSED: can resume running, fail, or be cancelled
+            self::PAUSED => in_array($state, [self::RUNNING, self::FAILED, self::CANCELLED]),
 
             // Terminal states cannot transition to other states
             default => false,

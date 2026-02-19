@@ -2,6 +2,8 @@
 
 namespace SolutionForest\WorkflowEngine\Core;
 
+use SolutionForest\WorkflowEngine\Support\ConditionEvaluator;
+
 /**
  * Represents a single step in a workflow with complete configuration and execution metadata.
  *
@@ -220,28 +222,7 @@ class Step
      */
     private function evaluateCondition(string $condition, array $data): bool
     {
-        // Enhanced condition evaluation with support for more operators
-        if (preg_match('/(\w+(?:\.\w+)*)\s*(===|!==|>=|<=|==|!=|>|<)\s*(.+)/', $condition, $matches)) {
-            $key = $matches[1];
-            $operator = $matches[2];
-            $value = trim($matches[3], '"\'');
-
-            $dataValue = data_get($data, $key);
-
-            return match ($operator) {
-                '===' => $dataValue === $value,
-                '!==' => $dataValue !== $value,
-                '>=' => $dataValue >= $value,
-                '<=' => $dataValue <= $value,
-                '==' => $dataValue == $value,
-                '!=' => $dataValue != $value,
-                '>' => $dataValue > $value,
-                '<' => $dataValue < $value,
-                default => false,
-            };
-        }
-
-        return true; // Default to true if condition cannot be parsed
+        return ConditionEvaluator::evaluate($condition, $data);
     }
 
     /**

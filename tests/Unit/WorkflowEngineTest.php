@@ -8,8 +8,8 @@ use SolutionForest\WorkflowEngine\Exceptions\WorkflowInstanceNotFoundException;
 use SolutionForest\WorkflowEngine\Tests\Support\InMemoryStorage;
 
 beforeEach(function () {
-    $storage = new InMemoryStorage;
-    $this->engine = new WorkflowEngine($storage);
+    $this->storage = new InMemoryStorage;
+    $this->engine = new WorkflowEngine($this->storage);
 });
 
 test('it can start a workflow', function () {
@@ -30,7 +30,7 @@ test('it can start a workflow', function () {
     expect($workflowId)->not->toBeEmpty();
 
     // Verify the workflow instance was created
-    $instance = $this->engine->getWorkflow($workflowId);
+    $instance = $this->engine->getInstance($workflowId);
     expect($instance)->toBeInstanceOf(WorkflowInstance::class);
     expect($instance->getState())->toBe(WorkflowState::COMPLETED); // Log action completes immediately
     expect($instance->getName())->toBe('Test Workflow');
@@ -52,7 +52,7 @@ test('it can start a workflow with context', function () {
     $context = ['name' => 'John'];
     $workflowId = $this->engine->start('test-workflow', $definition, $context);
 
-    $instance = $this->engine->getWorkflow($workflowId);
+    $instance = $this->engine->getInstance($workflowId);
     $workflowData = $instance->getContext()->getData();
 
     // Should contain original context plus any data added by actions
@@ -81,20 +81,24 @@ test('it can resume a paused workflow', function () {
         ],
     ];
 
-    $workflowId = $this->engine->start('test-workflow', $definition);
+    // Create a paused workflow manually (bypass auto-execution)
+    $parser = new \SolutionForest\WorkflowEngine\Core\DefinitionParser;
+    $workflowDef = $parser->parse($definition);
+    $workflowId = 'test-workflow';
+    $instance = new WorkflowInstance(
+        id: $workflowId,
+        definition: $workflowDef,
+        state: WorkflowState::PAUSED,
+    );
+    $this->storage->save($instance);
 
     // Verify workflow was created
     expect($workflowId)->toBe('test-workflow');
 
-    // Get instance and manually pause it using the same storage instance
-    $instance = $this->engine->getInstance($workflowId);
-    $instance->setState(WorkflowState::PAUSED);
-    $this->storage->save($instance);
-
     // Resume it
     $this->engine->resume($workflowId);
 
-    $instance = $this->engine->getWorkflow($workflowId);
+    $instance = $this->engine->getInstance($workflowId);
     // After resume, it should be completed since we have simple log actions
     expect($instance->getState())->toBe(WorkflowState::COMPLETED);
 });
@@ -112,10 +116,20 @@ test('it can cancel a workflow', function () {
         ],
     ];
 
-    $workflowId = $this->engine->start('test-workflow', $definition);
+    // Create a workflow in RUNNING state (so it can be cancelled)
+    $parser = new \SolutionForest\WorkflowEngine\Core\DefinitionParser;
+    $workflowDef = $parser->parse($definition);
+    $workflowId = 'test-workflow';
+    $instance = new WorkflowInstance(
+        id: $workflowId,
+        definition: $workflowDef,
+        state: WorkflowState::RUNNING,
+    );
+    $this->storage->save($instance);
+
     $this->engine->cancel($workflowId, 'User cancelled');
 
-    $instance = $this->engine->getWorkflow($workflowId);
+    $instance = $this->engine->getInstance($workflowId);
     expect($instance->getState())->toBe(WorkflowState::CANCELLED);
 });
 
@@ -151,7 +165,7 @@ test('it throws exception for invalid workflow definition', function () {
 })->throws(InvalidWorkflowDefinitionException::class, 'Required field \'name\' is missing from workflow definition');
 
 test('it throws exception for nonexistent workflow', function () {
-    $this->engine->getWorkflow('nonexistent');
+    $this->engine->getInstance('nonexistent');
 })->throws(WorkflowInstanceNotFoundException::class, 'Workflow instance \'nonexistent\' was not found');
 
 test('it can list workflows', function () {
@@ -170,11 +184,11 @@ test('it can list workflows', function () {
     $workflowId1 = $this->engine->start('test-workflow-1', $definition);
     $workflowId2 = $this->engine->start('test-workflow-2', $definition);
 
-    $workflows = $this->engine->listWorkflows();
+    $workflows = $this->engine->getInstances();
 
     expect($workflows)->toHaveCount(2);
-    expect(array_column($workflows, 'workflow_id'))->toContain($workflowId1);
-    expect(array_column($workflows, 'workflow_id'))->toContain($workflowId2);
+    expect(array_map(fn ($w) => $w->getId(), $workflows))->toContain($workflowId1);
+    expect(array_map(fn ($w) => $w->getId(), $workflows))->toContain($workflowId2);
 });
 
 test('it can filter workflows by state', function () {
@@ -190,16 +204,28 @@ test('it can filter workflows by state', function () {
         ],
     ];
 
+    // Create a workflow that completes
     $completedId = $this->engine->start('completed-workflow', $definition);
-    $cancelledId = $this->engine->start('cancelled-workflow', $definition);
 
+    // Create a workflow in RUNNING state, then cancel it
+    $parser = new \SolutionForest\WorkflowEngine\Core\DefinitionParser;
+    $workflowDef = $parser->parse($definition);
+    $cancelledId = 'cancelled-workflow';
+    $instance = new WorkflowInstance(
+        id: $cancelledId,
+        definition: $workflowDef,
+        state: WorkflowState::RUNNING, // Create in RUNNING state so we can cancel it
+    );
+    $this->storage->save($instance);
+
+    // Now cancel it
     $this->engine->cancel($cancelledId);
 
-    $completedWorkflows = $this->engine->listWorkflows(['state' => WorkflowState::COMPLETED]);
-    $cancelledWorkflows = $this->engine->listWorkflows(['state' => WorkflowState::CANCELLED]);
+    $completedWorkflows = $this->engine->getInstances(['state' => WorkflowState::COMPLETED]);
+    $cancelledWorkflows = $this->engine->getInstances(['state' => WorkflowState::CANCELLED]);
 
     // Debug: check if workflows exist
-    $allWorkflows = $this->engine->listWorkflows();
+    $allWorkflows = $this->engine->getInstances();
 
     expect($completedWorkflows)->toHaveCount(1);
     expect($cancelledWorkflows)->toHaveCount(1);
@@ -207,7 +233,7 @@ test('it can filter workflows by state', function () {
     // Find the workflows we created
     $found = false;
     foreach ($completedWorkflows as $workflow) {
-        if ($workflow['workflow_id'] === 'completed-workflow') {
+        if ($workflow->getId() === 'completed-workflow') {
             $found = true;
             break;
         }
@@ -216,7 +242,7 @@ test('it can filter workflows by state', function () {
 
     $found = false;
     foreach ($cancelledWorkflows as $workflow) {
-        if ($workflow['workflow_id'] === 'cancelled-workflow') {
+        if ($workflow->getId() === 'cancelled-workflow') {
             $found = true;
             break;
         }

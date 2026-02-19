@@ -8,12 +8,14 @@ use SolutionForest\WorkflowEngine\Contracts\Logger;
 use SolutionForest\WorkflowEngine\Contracts\WorkflowAction;
 use SolutionForest\WorkflowEngine\Events\StepCompletedEvent;
 use SolutionForest\WorkflowEngine\Events\StepFailedEvent;
+use SolutionForest\WorkflowEngine\Events\StepRetriedEvent;
 use SolutionForest\WorkflowEngine\Events\WorkflowCompletedEvent;
 use SolutionForest\WorkflowEngine\Events\WorkflowFailedEvent;
 use SolutionForest\WorkflowEngine\Exceptions\ActionNotFoundException;
 use SolutionForest\WorkflowEngine\Exceptions\StepExecutionException;
 use SolutionForest\WorkflowEngine\Support\NullEventDispatcher;
 use SolutionForest\WorkflowEngine\Support\NullLogger;
+use SolutionForest\WorkflowEngine\Support\Timeout;
 
 /**
  * Workflow executor responsible for running workflow steps and managing execution flow.
@@ -150,8 +152,8 @@ class Executor
      */
     private function processWorkflow(WorkflowInstance $instance): void
     {
-        // If workflow is not running, start it
-        if ($instance->getState() === WorkflowState::PENDING) {
+        // If workflow is not running, transition it to running
+        if (in_array($instance->getState(), [WorkflowState::PENDING, WorkflowState::PAUSED, WorkflowState::WAITING])) {
             $instance->setState(WorkflowState::RUNNING);
             $this->stateManager->save($instance);
         }
@@ -217,7 +219,7 @@ class Executor
 
         try {
             if ($step->hasAction()) {
-                $this->executeAction($instance, $step);
+                $this->executeActionWithRetry($instance, $step);
             }
 
             // Mark step as completed
@@ -227,7 +229,6 @@ class Executor
             $this->logger->info('Workflow step completed successfully', [
                 'workflow_id' => $instance->getId(),
                 'step_id' => $step->getId(),
-                'step_duration' => 'calculated_in_future_version', // TODO: Add timing
             ]);
 
             // Continue execution recursively
@@ -265,6 +266,112 @@ class Executor
 
             // Propagate the enhanced exception
             throw $stepException;
+        }
+    }
+
+    /**
+     * Execute a step's action with retry logic.
+     *
+     * @param WorkflowInstance $instance The workflow instance
+     * @param Step $step The step to execute
+     *
+     * @throws ActionNotFoundException If the action class doesn't exist
+     * @throws StepExecutionException If all retry attempts are exhausted
+     */
+    private function executeActionWithRetry(WorkflowInstance $instance, Step $step): void
+    {
+        $maxAttempts = $step->getRetryAttempts() + 1; // +1 for initial attempt
+
+        if ($maxAttempts <= 1) {
+            // No retries configured, execute directly
+            $this->executeAction($instance, $step);
+
+            return;
+        }
+
+        $lastException = null;
+
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+            try {
+                $this->executeAction($instance, $step);
+
+                return; // Success — exit retry loop
+            } catch (\Exception $e) {
+                $lastException = $e;
+
+                if ($attempt === $maxAttempts) {
+                    $this->logger->error('Step failed after all retry attempts', [
+                        'workflow_id' => $instance->getId(),
+                        'step_id' => $step->getId(),
+                        'attempts' => $attempt,
+                        'max_attempts' => $maxAttempts,
+                        'error' => $e->getMessage(),
+                    ]);
+
+                    throw $e; // Final attempt failed — propagate
+                }
+
+                $this->logger->warning('Step failed, retrying', [
+                    'workflow_id' => $instance->getId(),
+                    'step_id' => $step->getId(),
+                    'attempt' => $attempt,
+                    'max_attempts' => $maxAttempts,
+                    'error' => $e->getMessage(),
+                ]);
+
+                $this->eventDispatcher->dispatch(new StepRetriedEvent(
+                    $instance,
+                    $step,
+                    $attempt,
+                    $maxAttempts,
+                    $e
+                ));
+
+                // Exponential backoff: 100ms, 200ms, 400ms... (keep short for a library)
+                $backoffMicroseconds = (int) (100000 * pow(2, $attempt - 1));
+                usleep($backoffMicroseconds);
+            }
+        }
+    }
+
+    /**
+     * Execute a callback with a timeout constraint.
+     *
+     * Uses pcntl_alarm when available, otherwise logs a warning and executes without timeout.
+     *
+     * @param callable $callback The callback to execute
+     * @param int $timeoutSeconds Maximum execution time in seconds
+     * @return mixed The callback's return value
+     *
+     * @throws StepExecutionException If the timeout is exceeded
+     */
+    private function executeWithTimeout(callable $callback, int $timeoutSeconds): mixed
+    {
+        if (! function_exists('pcntl_alarm') || ! function_exists('pcntl_signal')) {
+            $this->logger->warning('pcntl extension not available, timeout not enforced', [
+                'timeout_seconds' => $timeoutSeconds,
+            ]);
+
+            return $callback();
+        }
+
+        pcntl_signal(SIGALRM, function () use ($timeoutSeconds) {
+            throw new \RuntimeException("Step execution timed out after {$timeoutSeconds} seconds");
+        });
+
+        pcntl_alarm($timeoutSeconds);
+
+        try {
+            $result = $callback();
+            pcntl_alarm(0);
+
+            return $result;
+        } catch (\Exception $e) {
+            pcntl_alarm(0);
+
+            throw $e;
+        } finally {
+            pcntl_signal(SIGALRM, SIG_DFL);
         }
     }
 
@@ -319,7 +426,16 @@ class Executor
             instance: $instance
         );
 
-        $result = $action->execute($context);
+        $timeoutValue = $step->getTimeout();
+        if ($timeoutValue !== null) {
+            $timeoutSeconds = Timeout::toSeconds($timeoutValue);
+            $result = $this->executeWithTimeout(
+                fn () => $action->execute($context),
+                $timeoutSeconds
+            );
+        } else {
+            $result = $action->execute($context);
+        }
 
         if ($result->isSuccess()) {
             // Merge any output data from the action

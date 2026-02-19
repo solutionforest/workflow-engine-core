@@ -4,12 +4,19 @@ namespace SolutionForest\WorkflowEngine\Events;
 
 use SolutionForest\WorkflowEngine\Core\WorkflowInstance;
 
-class WorkflowCompletedEvent
+final readonly class WorkflowCompletedEvent
 {
-    public WorkflowInstance $instance;
+    public function __construct(
+        public WorkflowInstance $instance,
+    ) {}
 
-    public function __construct(WorkflowInstance $instance)
+    public function getWorkflowId(): string
     {
-        $this->instance = $instance;
+        return $this->instance->getId();
+    }
+
+    public function getWorkflowName(): string
+    {
+        return $this->instance->getDefinition()->getName();
     }
 }

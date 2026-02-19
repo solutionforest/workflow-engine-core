@@ -3,6 +3,7 @@
 namespace SolutionForest\WorkflowEngine\Core;
 
 use SolutionForest\WorkflowEngine\Exceptions\InvalidWorkflowDefinitionException;
+use SolutionForest\WorkflowEngine\Support\ConditionEvaluator;
 
 /**
  * Represents a complete workflow definition with steps, transitions, and metadata.
@@ -322,28 +323,7 @@ final class WorkflowDefinition
      */
     private function evaluateCondition(string $condition, array $data): bool
     {
-        // Enhanced condition evaluation with comprehensive operator support
-        if (preg_match('/(\w+(?:\.\w+)*)\s*(===|!==|>=|<=|==|!=|>|<)\s*(.+)/', $condition, $matches)) {
-            $key = $matches[1];
-            $operator = $matches[2];
-            $value = trim($matches[3], '"\'');
-
-            $dataValue = $this->getNestedValue($data, $key);
-
-            return match ($operator) {
-                '===' => $dataValue === $value,
-                '!==' => $dataValue !== $value,
-                '>=' => $dataValue >= $value,
-                '<=' => $dataValue <= $value,
-                '==' => $dataValue == $value,
-                '!=' => $dataValue != $value,
-                '>' => $dataValue > $value,
-                '<' => $dataValue < $value,
-                default => false,
-            };
-        }
-
-        return false; // Default to false if condition cannot be parsed
+        return ConditionEvaluator::evaluate($condition, $data);
     }
 
     /**
@@ -393,30 +373,5 @@ final class WorkflowDefinition
             transitions: $data['transitions'] ?? [],
             metadata: $data['metadata'] ?? []
         );
-    }
-
-    /**
-     * Get a nested value from an array using dot notation.
-     *
-     * @param array<string, mixed> $array
-     */
-    private function getNestedValue(array $array, string $key, $default = null)
-    {
-        if (isset($array[$key])) {
-            return $array[$key];
-        }
-
-        // Handle dot notation for nested arrays
-        $keys = explode('.', $key);
-        $value = $array;
-
-        foreach ($keys as $nestedKey) {
-            if (! is_array($value) || ! array_key_exists($nestedKey, $value)) {
-                return $default;
-            }
-            $value = $value[$nestedKey];
-        }
-
-        return $value;
     }
 }

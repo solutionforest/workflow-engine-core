@@ -2,13 +2,17 @@
 
 namespace SolutionForest\WorkflowEngine\Events;
 
+use SolutionForest\WorkflowEngine\Core\Step;
 use SolutionForest\WorkflowEngine\Core\WorkflowInstance;
 
-final readonly class WorkflowFailedEvent
+final readonly class StepRetriedEvent
 {
     public function __construct(
         public WorkflowInstance $instance,
-        public \Exception $exception,
+        public Step $step,
+        public int $attempt,
+        public int $maxAttempts,
+        public \Throwable $lastError,
     ) {}
 
     public function getWorkflowId(): string
@@ -16,13 +20,8 @@ final readonly class WorkflowFailedEvent
         return $this->instance->getId();
     }
 
-    public function getWorkflowName(): string
+    public function getStepId(): string
     {
-        return $this->instance->getDefinition()->getName();
-    }
-
-    public function getErrorMessage(): string
-    {
-        return $this->exception->getMessage();
+        return $this->step->getId();
     }
 }

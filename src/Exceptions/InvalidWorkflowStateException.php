@@ -211,4 +211,26 @@ final class InvalidWorkflowStateException extends WorkflowException
             $instance->getId()
         );
     }
+
+    /**
+     * Create an exception for an invalid state transition.
+     *
+     * @param string $instanceId The workflow instance ID
+     * @param WorkflowState $currentState The current state
+     * @param WorkflowState $attemptedState The attempted target state
+     */
+    public static function invalidTransition(
+        string $instanceId,
+        WorkflowState $currentState,
+        WorkflowState $attemptedState
+    ): static {
+        $message = "Cannot transition workflow '{$instanceId}' from '{$currentState->value}' to '{$attemptedState->value}'";
+
+        return new self(
+            $message,
+            $currentState,
+            $attemptedState,
+            $instanceId
+        );
+    }
 }

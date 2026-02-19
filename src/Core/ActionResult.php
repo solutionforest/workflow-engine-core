@@ -2,6 +2,8 @@
 
 namespace SolutionForest\WorkflowEngine\Core;
 
+use SolutionForest\WorkflowEngine\Support\Arr;
+
 /**
  * Represents the result of a workflow action execution.
  *
@@ -375,7 +377,7 @@ final class ActionResult
      */
     public function get(string $key, $default = null)
     {
-        return data_get($this->data, $key, $default);
+        return Arr::get($this->data, $key, $default);
     }
 
     /**

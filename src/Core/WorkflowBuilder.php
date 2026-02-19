@@ -281,7 +281,7 @@ final class WorkflowBuilder
     public function when(string $condition, callable $callback): self
     {
         if (empty(trim($condition))) {
-            throw InvalidWorkflowDefinitionException::invalidCondition($condition);
+            throw InvalidWorkflowDefinitionException::invalidCondition($condition, 'Condition cannot be empty.');
         }
 
         $originalStepsCount = count($this->steps);

@@ -338,8 +338,8 @@ test('document approval workflow - escalation and timeout handling', function ()
         ],
         'transitions' => [
             ['from' => 'submit_document', 'to' => 'manager_review'],
-            ['from' => 'manager_review', 'to' => 'director_escalation', 'condition' => 'timeout_occurred'],
-            ['from' => 'director_escalation', 'to' => 'executive_override', 'condition' => 'escalation_required'],
+            ['from' => 'manager_review', 'to' => 'director_escalation', 'condition' => 'timeout_occurred === "true"'],
+            ['from' => 'director_escalation', 'to' => 'executive_override', 'condition' => 'escalation_required === "true"'],
         ],
         'escalation_rules' => [
             'timeout_escalation' => true,

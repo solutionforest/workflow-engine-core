@@ -32,7 +32,7 @@ A powerful, framework-agnostic workflow engine for PHP applications. This core l
 - **⏱️ Timeouts**: Step-level timeout controls for reliable execution
 - **📋 Conditions**: Conditional workflow execution based on runtime data
 - **🎯 Events**: Rich event system for monitoring and integration
-- **🧪 Well Tested**: Comprehensive test suite with 160+ assertions
+- **🧪 Well Tested**: Comprehensive test suite with 93 tests and 224+ assertions
 
 ## 📦 Installation
 
@@ -64,6 +64,7 @@ composer ci
 use SolutionForest\WorkflowEngine\Core\WorkflowBuilder;
 use SolutionForest\WorkflowEngine\Core\WorkflowEngine;
 use SolutionForest\WorkflowEngine\Core\WorkflowContext;
+use SolutionForest\WorkflowEngine\Core\ActionResult;
 use SolutionForest\WorkflowEngine\Actions\BaseAction;
 
 // Define custom actions
@@ -72,64 +73,76 @@ class ValidateOrderAction extends BaseAction
     public function execute(WorkflowContext $context): ActionResult
     {
         $orderId = $context->getData('order_id');
-        
+
         // Your validation logic here
         if ($this->isValidOrder($orderId)) {
             return ActionResult::success(['validated' => true]);
         }
-        
+
         return ActionResult::failure('Invalid order');
     }
 }
 
-// Create a workflow
-$workflow = WorkflowBuilder::create('order-processing')
+// Build a workflow definition
+$definition = WorkflowBuilder::create('order-processing')
+    ->description('Process customer orders')
     ->addStep('validate', ValidateOrderAction::class)
-    ->addStep('payment', ProcessPaymentAction::class)
+    ->addStep('payment', ProcessPaymentAction::class, timeout: 300, retryAttempts: 3)
     ->addStep('fulfillment', FulfillOrderAction::class)
-    ->addTransition('validate', 'payment')
-    ->addTransition('payment', 'fulfillment')
     ->build();
 
-// Execute the workflow
-$engine = new WorkflowEngine();
-$context = new WorkflowContext(
-    workflowId: 'order-processing',
-    stepId: 'validate',
-    data: ['order_id' => 123, 'customer_id' => 456]
+// Create engine with storage adapter and event dispatcher
+$engine = new WorkflowEngine($storageAdapter, $eventDispatcher);
+
+// Start and run the workflow
+$instanceId = $engine->start(
+    'order-processing',
+    $definition->toArray(),
+    ['order_id' => 123, 'customer_id' => 456]
 );
 
-$instance = $engine->start($workflow, $context);
-$result = $engine->executeStep($instance, $context);
+// Check the result
+$instance = $engine->getInstance($instanceId);
+echo $instance->getState()->value; // "completed"
 ```
 
-### Advanced Features
+### Advanced Workflow Builder
 
-#### Conditional Steps
 ```php
-use SolutionForest\WorkflowEngine\Attributes\Condition;
+use SolutionForest\WorkflowEngine\Core\WorkflowBuilder;
 
-class ConditionalAction extends BaseAction
-{
-    #[Condition("data.amount > 1000")]
-    public function execute(WorkflowContext $context): ActionResult
-    {
-        // This action only executes if amount > 1000
-        return ActionResult::success();
-    }
-}
+$workflow = WorkflowBuilder::create('order-flow')
+    ->description('Process customer orders')
+    ->addStep('validate', ValidateOrderAction::class)
+    ->when('order.total > 1000', function ($builder) {
+        $builder->addStep('fraud_check', FraudCheckAction::class);
+    })
+    ->addStep('payment', ProcessPaymentAction::class, timeout: 300, retryAttempts: 3)
+    ->email('order-confirmation', 'customer@example.com', 'Order Confirmed')
+    ->build();
+
+// Quick templates for common patterns
+$workflow = WorkflowBuilder::quick()->userOnboarding();
+$workflow = WorkflowBuilder::quick()->orderProcessing();
+$workflow = WorkflowBuilder::quick()->documentApproval();
 ```
+
+### PHP 8.3+ Attributes
+
+> **Note:** Attributes are currently metadata annotations for documentation and tooling. They are not yet auto-parsed by the engine at runtime — use the builder API (`timeout:`, `retryAttempts:`, `when()`) or step config to apply these behaviors. Attribute-driven execution is planned for a future release.
+
+Use native PHP attributes to annotate actions with retry, timeout, and conditions:
 
 #### Retry Logic
 ```php
 use SolutionForest\WorkflowEngine\Attributes\Retry;
 
-class ReliableAction extends BaseAction
+#[Retry(attempts: 3, backoff: 'exponential', delay: 1000)]
+class ReliableApiAction extends BaseAction
 {
-    #[Retry(maxAttempts: 3, delay: 1000)]
     public function execute(WorkflowContext $context): ActionResult
     {
-        // This action will retry up to 3 times with 1 second delay
+        // Retries up to 3 times with exponential backoff starting at 1s
         return ActionResult::success();
     }
 }
@@ -139,170 +152,256 @@ class ReliableAction extends BaseAction
 ```php
 use SolutionForest\WorkflowEngine\Attributes\Timeout;
 
+#[Timeout(seconds: 30)]
 class TimedAction extends BaseAction
 {
-    #[Timeout(seconds: 30)]
     public function execute(WorkflowContext $context): ActionResult
     {
-        // This action will timeout after 30 seconds
+        // Will timeout after 30 seconds
         return ActionResult::success();
     }
 }
 ```
 
+#### Conditional Execution
+```php
+use SolutionForest\WorkflowEngine\Attributes\Condition;
+
+#[Condition('order.amount > 100')]
+class PremiumProcessingAction extends BaseAction
+{
+    public function execute(WorkflowContext $context): ActionResult
+    {
+        // Only executes when order.amount > 100
+        return ActionResult::success();
+    }
+}
+```
+
+#### Step Metadata
+```php
+use SolutionForest\WorkflowEngine\Attributes\WorkflowStep;
+
+#[WorkflowStep(id: 'send_email', name: 'Send Welcome Email', description: 'Sends a welcome email to the new user')]
+class SendWelcomeEmailAction extends BaseAction
+{
+    public function execute(WorkflowContext $context): ActionResult
+    {
+        return ActionResult::success();
+    }
+}
+```
+
+### Retry, Timeout & Conditions via Builder
+
+These features can also be configured through the fluent builder API:
+
+```php
+// Steps with retry and timeout configured via builder
+$workflow = WorkflowBuilder::create('reliable-flow')
+    ->addStep('fetch_data', FetchDataAction::class, timeout: 30, retryAttempts: 3)
+    ->addStep('process', ProcessAction::class, timeout: 60)
+    ->build();
+
+// Conditional steps evaluated at runtime
+$workflow = WorkflowBuilder::create('conditional-flow')
+    ->addStep('validate', ValidateAction::class)
+    ->when('order.total > 1000', function ($builder) {
+        $builder->addStep('fraud_check', FraudCheckAction::class);
+    })
+    ->addStep('complete', CompleteAction::class)
+    ->build();
+```
+
+### Workflow Lifecycle Management
+
+```php
+// Start, resume, cancel
+$instanceId = $engine->start('my-workflow', $definition->toArray(), ['key' => 'value']);
+$instance = $engine->getInstance($instanceId);
+$engine->resume($instanceId);
+$engine->cancel($instanceId, 'No longer needed');
+
+// Track progress
+$progress = $instance->getProgress(); // 0.0 to 100.0
+$summary = $instance->getStatusSummary();
+
+// Query instances with filters
+$instances = $engine->getInstances([
+    'state' => 'running',
+    'definition_name' => 'order-processing',
+    'created_after' => new \DateTime('-7 days'),
+    'limit' => 50,
+    'offset' => 0,
+]);
+```
+
+### SimpleWorkflow Helper
+
+For quick workflow execution without manual engine setup:
+
+```php
+use SolutionForest\WorkflowEngine\Support\SimpleWorkflow;
+
+$simple = new SimpleWorkflow($storageAdapter);
+
+// Run actions sequentially
+$instanceId = $simple->sequential('user-onboarding', [
+    SendWelcomeEmailAction::class,
+    CreateUserProfileAction::class,
+    AssignDefaultRoleAction::class,
+], ['user_id' => 123]);
+
+// Run a single action as a workflow
+$instanceId = $simple->runAction(SendEmailAction::class, [
+    'to' => 'user@example.com',
+    'subject' => 'Welcome!',
+]);
+
+// Execute from a builder
+$builder = WorkflowBuilder::create('custom-flow')
+    ->addStep('validate', ValidateAction::class)
+    ->addStep('process', ProcessAction::class);
+$instanceId = $simple->executeBuilder($builder, $context);
+
+// Check status
+$status = $simple->getStatus($instanceId);
+// Returns: id, state, current_step, progress, completed_steps, failed_steps, error_message, ...
+```
+
 ## 🏗️ Architecture
 
-The workflow engine follows a clean architecture pattern with clear separation of concerns:
+The workflow engine follows a clean architecture with clear separation of concerns:
 
 ```
-┌─────────────────┐
-│   Workflow      │
-│   Builder       │
-└─────────────────┘
-         │
-         ▼
-┌─────────────────┐    ┌─────────────────┐
-│   Workflow      │◄───│   Workflow      │
-│   Definition    │    │   Engine        │
-└─────────────────┘    └─────────────────┘
-         │                       │
-         ▼                       ▼
-┌─────────────────┐    ┌─────────────────┐
-│     Steps       │    │    Executor     │
-│   & Actions     │    │                 │
-└─────────────────┘    └─────────────────┘
-         │                       │
-         ▼                       ▼
-┌─────────────────┐    ┌─────────────────┐
-│     State       │    │     Events      │
-│   Manager       │    │   Dispatcher    │
-└─────────────────┘    └─────────────────┘
+WorkflowBuilder → WorkflowDefinition → WorkflowEngine → Executor → Actions
+                                              ↓
+                                        StateManager → StorageAdapter
+                                              ↓
+                                        EventDispatcher
 ```
 
+### Core Components
 
-#### 📝 **Workflow Builder**
-- **Purpose**: Fluent interface for creating workflow definitions
-- **Responsibilities**: 
-  - Provides method chaining (`.addStep()`, `.when()`, `.email()`, etc.)
-  - Validates workflow structure during construction
-  - Creates immutable workflow definitions
-  - Supports conditional steps and common patterns
-- **Example**: `WorkflowBuilder::create('user-onboarding')->addStep(...)->build()`
+| Component | Purpose |
+|-----------|---------|
+| **WorkflowBuilder** | Fluent API for constructing workflow definitions with `addStep()`, `when()`, `email()`, `delay()`, `http()` |
+| **WorkflowDefinition** | Immutable blueprint containing steps, transitions, conditions, and metadata |
+| **WorkflowEngine** | Central orchestrator — `start()`, `resume()`, `cancel()`, `getInstance()`, `getInstances()`, `getStatus()` |
+| **Executor** | Runs steps sequentially with retry logic, timeout enforcement, and condition evaluation |
+| **StateManager** | Coordinates persistence through StorageAdapter |
+| **EventDispatcher** | Broadcasts 7 event types during workflow lifecycle |
 
-#### 📋 **Workflow Definition**
-- **Purpose**: Immutable data structure representing a complete workflow
-- **Responsibilities**:
-  - Contains workflow metadata (name, description, version)
-  - Stores all steps and their relationships
-  - Defines step execution order and conditions
-  - Serves as a blueprint for workflow execution
-- **Key data**: Steps, transitions, conditions, metadata
+### State Machine
 
-#### ⚡ **Workflow Engine**
-- **Purpose**: Central orchestrator that manages workflow execution
-- **Responsibilities**:
-  - Starts new workflow instances from definitions
-  - Manages workflow lifecycle (start, pause, resume, cancel)
-  - Coordinates between different components
-  - Provides API for workflow operations
-- **Main methods**: `start()`, `pause()`, `resume()`, `cancel()`, `getInstance()`
+```
+PENDING → RUNNING → COMPLETED
+    ↓         ↓ ↑
+  FAILED   WAITING
+    ↑         ↓ ↑
+  FAILED ← PAUSED
+    ↑
+CANCELLED ← (any non-terminal state)
+```
 
-#### 🎯 **Steps & Actions**
-- **Purpose**: Individual workflow tasks and their implementations
-- **Responsibilities**:
-  - **Steps**: Define what should happen (metadata, config, conditions)
-  - **Actions**: Implement the actual business logic (`execute()` method)
-  - Handle step-specific configuration (timeout, retry, conditions)
-  - Support compensation actions for rollback scenarios
-- **Examples**: `SendEmailAction`, `CreateUserAction`, `ValidateOrderAction`
+**Valid transitions:**
+- `PENDING` → `RUNNING`, `FAILED`, `CANCELLED`
+- `RUNNING` → `WAITING`, `PAUSED`, `COMPLETED`, `FAILED`, `CANCELLED`
+- `WAITING` → `RUNNING`, `FAILED`, `CANCELLED`
+- `PAUSED` → `RUNNING`, `FAILED`, `CANCELLED`
+- Terminal states (`COMPLETED`, `FAILED`, `CANCELLED`) → no further transitions
 
-#### 🎬 **Executor**
-- **Purpose**: Runtime engine that executes individual workflow steps
-- **Responsibilities**:
-  - Executes actions in the correct sequence
-  - Handles conditional execution based on workflow context
-  - Manages timeouts and retry logic
-  - Processes step transitions and flow control
-  - Handles errors and compensation
+State transitions are validated at runtime — invalid transitions throw `InvalidWorkflowStateException`.
 
-#### 🗄️ **State Manager**
-- **Purpose**: Component responsible for workflow instance state persistence
-- **Responsibilities**:
-  - Saves/loads workflow instances to/from storage
-  - Tracks workflow execution state (running, paused, completed, failed)
-  - Manages workflow context data
-  - Handles state transitions and validation
-  - Supports different storage adapters (database, file, memory)
+### Namespace Map
 
-#### 📡 **Events Dispatcher**
-- **Purpose**: Event system for monitoring and integration
-- **Responsibilities**:
-  - Fires events during workflow execution
-  - Enables workflow monitoring and logging
-  - Supports custom event listeners
-  - Provides hooks for external system integration
-  - Events: `WorkflowStarted`, `StepCompleted`, `WorkflowFailed`, etc.
+| Namespace | Contents |
+|-----------|----------|
+| `Core\` | WorkflowEngine, WorkflowBuilder, Executor, StateManager, WorkflowInstance, WorkflowDefinition, WorkflowContext, ActionResult, Step, DefinitionParser, ActionResolver |
+| `Actions\` | BaseAction, LogAction, EmailAction, HttpAction, DelayAction, ConditionAction |
+| `Contracts\` | WorkflowAction, StorageAdapter, EventDispatcher, Logger |
+| `Attributes\` | WorkflowStep, Retry, Timeout, Condition |
+| `Events\` | WorkflowStartedEvent, WorkflowCompletedEvent, WorkflowFailedEvent, WorkflowCancelledEvent, StepCompletedEvent, StepFailedEvent, StepRetriedEvent |
+| `Exceptions\` | WorkflowException, InvalidWorkflowDefinitionException, InvalidWorkflowStateException, ActionNotFoundException, StepExecutionException, WorkflowInstanceNotFoundException |
+| `Support\` | NullLogger, NullEventDispatcher, SimpleWorkflow, Uuid, Timeout, ConditionEvaluator, Arr |
 
-### 🔄 **Data Flow**
-1. **Builder** → creates → **Definition**
-2. **Engine** → uses **Definition** to create instances
-3. **Engine** → delegates to **Executor** for step execution
-4. **Executor** → runs → **Steps & Actions**
-5. **State Manager** → persists → workflow state
-6. **Events Dispatcher** → broadcasts → execution events
+### Built-in Actions
 
-### ✅ **Architecture Benefits**
-- **Separation of concerns** - each component has a single responsibility
-- **Extensibility** - you can swap out storage adapters, add custom actions
-- **Testability** - each component can be tested independently
-- **Framework agnostic** - no dependencies on specific frameworks
-- **Type safety** - full PHP 8.3+ type hints throughout
+Six ready-to-use actions are included:
 
+| Action | Purpose | Config Keys |
+|--------|---------|-------------|
+| **LogAction** | Log messages with placeholder replacement (`{user.name}`) | `message`, `level` (debug/info/warning/error) |
+| **EmailAction** | Mock email sending with template support | `to`, `subject`, `body`, `template` |
+| **HttpAction** | HTTP requests with `{{ variable }}` template variables | `url`, `method`, `headers`, `body` |
+| **DelayAction** | Pause execution for a specified duration | `seconds`, `minutes`, `hours` |
+| **ConditionAction** | Evaluate boolean expressions and branch (`on_true`/`on_false`) | `condition`, `on_true`, `on_false` |
+| **BaseAction** | Abstract base class for custom actions | — |
+
+### WorkflowState Helpers
+
+The `WorkflowState` enum provides utility methods for UI and logic:
+
+```php
+$state = $instance->getState();
+
+$state->isActive();        // true for PENDING, RUNNING, WAITING, PAUSED
+$state->isFinished();      // true for COMPLETED, FAILED, CANCELLED
+$state->isSuccessful();    // true for COMPLETED
+$state->isError();         // true for FAILED
+$state->label();           // "Running"
+$state->description();     // "The workflow is actively executing steps..."
+$state->color();           // "blue" (gray, blue, yellow, orange, green, red, purple)
+$state->icon();            // "▶️"
+$state->canTransitionTo(WorkflowState::COMPLETED); // bool
+$state->getValidTransitions(); // [WorkflowState::WAITING, ...]
+```
 
 ## 🔧 Configuration
 
 ### Storage Adapters
 
-Implement the `StorageAdapter` interface for custom storage:
+Implement the `StorageAdapter` interface for custom persistence:
 
 ```php
 use SolutionForest\WorkflowEngine\Contracts\StorageAdapter;
 
-class CustomStorageAdapter implements StorageAdapter
+class DatabaseStorageAdapter implements StorageAdapter
 {
-    public function save(WorkflowInstance $instance): void
-    {
-        // Save workflow instance to your storage
-    }
-
-    public function load(string $instanceId): ?WorkflowInstance
-    {
-        // Load workflow instance from your storage
-    }
-
-    public function delete(string $instanceId): void
-    {
-        // Delete workflow instance from your storage
-    }
+    public function save(WorkflowInstance $instance): void { /* ... */ }
+    public function load(string $id): WorkflowInstance { /* ... */ }
+    public function findInstances(array $criteria = []): array { /* ... */ }
+    public function delete(string $id): void { /* ... */ }
+    public function exists(string $id): bool { /* ... */ }
+    public function updateState(string $id, array $updates): void { /* ... */ }
 }
 ```
 
 ### Event Handling
 
-Listen to workflow events:
+Listen to workflow events — 7 event types are dispatched during execution:
 
 ```php
 use SolutionForest\WorkflowEngine\Contracts\EventDispatcher;
+use SolutionForest\WorkflowEngine\Events\WorkflowStartedEvent;
+use SolutionForest\WorkflowEngine\Events\WorkflowCompletedEvent;
+use SolutionForest\WorkflowEngine\Events\WorkflowFailedEvent;
+use SolutionForest\WorkflowEngine\Events\WorkflowCancelledEvent;
+use SolutionForest\WorkflowEngine\Events\StepCompletedEvent;
+use SolutionForest\WorkflowEngine\Events\StepFailedEvent;
+use SolutionForest\WorkflowEngine\Events\StepRetriedEvent;
 
 class CustomEventDispatcher implements EventDispatcher
 {
     public function dispatch(object $event): void
     {
-        // Handle workflow events
-        match (get_class($event)) {
-            'SolutionForest\WorkflowEngine\Events\WorkflowStarted' => $this->onWorkflowStarted($event),
-            'SolutionForest\WorkflowEngine\Events\StepCompletedEvent' => $this->onStepCompleted($event),
-            'SolutionForest\WorkflowEngine\Events\WorkflowCompletedEvent' => $this->onWorkflowCompleted($event),
+        match ($event::class) {
+            WorkflowStartedEvent::class => $this->onWorkflowStarted($event),
+            WorkflowCompletedEvent::class => $this->onWorkflowCompleted($event),
+            WorkflowFailedEvent::class => $this->onWorkflowFailed($event),
+            StepCompletedEvent::class => $this->onStepCompleted($event),
+            StepFailedEvent::class => $this->onStepFailed($event),
+            StepRetriedEvent::class => $this->onStepRetried($event),
             default => null,
         };
     }
@@ -311,27 +410,17 @@ class CustomEventDispatcher implements EventDispatcher
 
 ### Logging
 
-Provide custom logging implementation:
+Provide a custom logging implementation (PSR-3 style):
 
 ```php
 use SolutionForest\WorkflowEngine\Contracts\Logger;
 
 class CustomLogger implements Logger
 {
-    public function info(string $message, array $context = []): void
-    {
-        // Log info messages
-    }
-
-    public function error(string $message, array $context = []): void
-    {
-        // Log error messages
-    }
-
-    public function warning(string $message, array $context = []): void
-    {
-        // Log warning messages
-    }
+    public function info(string $message, array $context = []): void { /* ... */ }
+    public function warning(string $message, array $context = []): void { /* ... */ }
+    public function error(string $message, array $context = []): void { /* ... */ }
+    public function debug(string $message, array $context = []): void { /* ... */ }
 }
 ```
 
@@ -392,11 +481,13 @@ composer pint && composer analyze && composer test
 
 We maintain high code quality through:
 
-- **100% PHPStan Level 6** - Static analysis with no errors
+- **100% PHPStan Level 6** - Static analysis with zero errors across 46 source files
 - **Laravel Pint** - Consistent code formatting following Laravel standards
-- **Comprehensive Testing** - 40 tests with 160+ assertions covering all core functionality
-- **Type Safety** - Full PHP 8.3+ type declarations and documentation
-- **Continuous Integration** - Automated quality checks on every commit
+- **Comprehensive Testing** - 93 tests with 224+ assertions covering unit, integration, and real-world scenarios
+- **Architecture Tests** - Automated checks preventing debug functions in source code
+- **State Transition Validation** - Runtime enforcement of valid workflow state transitions
+- **Type Safety** - Full PHP 8.3+ type declarations throughout
+- **Continuous Integration** - Automated quality checks on every commit (PHP 8.3/8.4 matrix)
 
 ## 📚 Framework Integrations
 
@@ -421,7 +512,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🔗 Links
 
-- [Documentation](https://github.com/solution-forest/workflow-engine-core/docs)
-- [Issues](https://github.com/solution-forest/workflow-engine-core/issues)
-- [Changelog](https://github.com/solution-forest/workflow-engine-core/blob/main/CHANGELOG.md)
-- [Laravel Integration](https://github.com/solution-forest/workflow-engine-laravel)
+- [Issues](https://github.com/solutionforest/workflow-engine-core/issues)
+- [Changelog](https://github.com/solutionforest/workflow-engine-core/blob/main/CHANGELOG.md)
+- [Laravel Integration](https://github.com/solutionforest/workflow-engine-laravel)
