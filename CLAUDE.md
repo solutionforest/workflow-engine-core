@@ -49,29 +49,34 @@ WorkflowBuilder → WorkflowDefinition → WorkflowEngine → Executor → Actio
 
 | Namespace | Purpose |
 |-----------|---------|
-| `Core\` | Engine, Builder, Executor, StateManager, Step, WorkflowInstance, WorkflowDefinition, WorkflowContext, ActionResult |
-| `Actions\` | Built-in actions: Log, Email, Http, Delay, Condition (all extend BaseAction) |
-| `Contracts\` | Interfaces: WorkflowAction, StorageAdapter, EventDispatcher, Logger |
-| `Attributes\` | PHP 8 attributes: WorkflowStep, Retry, Timeout, Condition |
-| `Events\` | WorkflowStarted, WorkflowCompleted, WorkflowFailed, WorkflowCancelled, StepCompleted, StepFailed |
-| `Exceptions\` | WorkflowException (base), InvalidWorkflowDefinition, InvalidWorkflowState, ActionNotFound, StepExecution, WorkflowInstanceNotFound |
-| `Support\` | NullLogger, NullEventDispatcher, SimpleWorkflow, Uuid |
+| `Core\` | WorkflowEngine, WorkflowBuilder, Executor, StateManager, WorkflowInstance, WorkflowDefinition, WorkflowContext, ActionResult, Step, DefinitionParser, ActionResolver |
+| `Actions\` | BaseAction, LogAction, EmailAction, HttpAction, DelayAction, ConditionAction |
+| `Contracts\` | WorkflowAction, StorageAdapter, EventDispatcher, Logger |
+| `Attributes\` | WorkflowStep, Retry, Timeout, Condition |
+| `Events\` | WorkflowStartedEvent, WorkflowCompletedEvent, WorkflowFailedEvent, WorkflowCancelledEvent, StepCompletedEvent, StepFailedEvent, StepRetriedEvent |
+| `Exceptions\` | WorkflowException (base), InvalidWorkflowDefinitionException, InvalidWorkflowStateException, ActionNotFoundException, StepExecutionException, WorkflowInstanceNotFoundException |
+| `Support\` | NullLogger, NullEventDispatcher, SimpleWorkflow, Uuid, Timeout, ConditionEvaluator, Arr |
 
 ### State Machine
 
 ```
 PENDING → RUNNING → COMPLETED
-              ↓ ↑
-           WAITING
-              ↓ ↑
-            PAUSED
-              ↓
-            FAILED
-
+    ↓         ↓ ↑
+  FAILED   WAITING
+    ↑         ↓ ↑
+  FAILED ← PAUSED
+    ↑
 CANCELLED ← (any non-terminal state)
 ```
 
-Terminal states: COMPLETED, FAILED, CANCELLED.
+**Valid transitions (enforced at runtime):**
+- `PENDING` → `RUNNING`, `FAILED`, `CANCELLED`
+- `RUNNING` → `WAITING`, `PAUSED`, `COMPLETED`, `FAILED`, `CANCELLED`
+- `WAITING` → `RUNNING`, `FAILED`, `CANCELLED`
+- `PAUSED` → `RUNNING`, `FAILED`, `CANCELLED`
+- Terminal states (`COMPLETED`, `FAILED`, `CANCELLED`) → no transitions allowed
+
+Invalid transitions throw `InvalidWorkflowStateException`.
 
 ### Key Contracts
 
@@ -157,7 +162,7 @@ GitHub Actions workflows:
 
 ## File Counts
 
-- 42 source files in `src/`
-- 18 test files in `tests/`
-- 40+ test cases, 160+ assertions
+- 46 source files in `src/`
+- 25 test files in `tests/`
+- 93 tests, 224+ assertions
 - PHPStan level 6 compliance
