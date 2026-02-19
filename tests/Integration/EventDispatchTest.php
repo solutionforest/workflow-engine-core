@@ -6,8 +6,8 @@ use SolutionForest\WorkflowEngine\Tests\Support\SpyEventDispatcher;
 
 describe('Event Dispatching', function () {
     test('dispatches workflow started event on start', function () {
-        $storage = new InMemoryStorage();
-        $spy = new SpyEventDispatcher();
+        $storage = new InMemoryStorage;
+        $spy = new SpyEventDispatcher;
         $engine = new WorkflowEngine($storage, $spy);
 
         $definition = [
@@ -34,8 +34,8 @@ describe('Event Dispatching', function () {
     });
 
     test('dispatches step completed event after step execution', function () {
-        $storage = new InMemoryStorage();
-        $spy = new SpyEventDispatcher();
+        $storage = new InMemoryStorage;
+        $spy = new SpyEventDispatcher;
         $engine = new WorkflowEngine($storage, $spy);
 
         $definition = [
@@ -58,8 +58,8 @@ describe('Event Dispatching', function () {
     });
 
     test('dispatches workflow completed event when all steps finish', function () {
-        $storage = new InMemoryStorage();
-        $spy = new SpyEventDispatcher();
+        $storage = new InMemoryStorage;
+        $spy = new SpyEventDispatcher;
         $engine = new WorkflowEngine($storage, $spy);
 
         $definition = [
@@ -82,8 +82,8 @@ describe('Event Dispatching', function () {
     });
 
     test('dispatches cancelled event on cancel', function () {
-        $storage = new InMemoryStorage();
-        $spy = new SpyEventDispatcher();
+        $storage = new InMemoryStorage;
+        $spy = new SpyEventDispatcher;
         $engine = new WorkflowEngine($storage, $spy);
 
         $definition = [
@@ -117,8 +117,8 @@ describe('Event Dispatching', function () {
     });
 
     test('dispatches events in correct order for full workflow', function () {
-        $storage = new InMemoryStorage();
-        $spy = new SpyEventDispatcher();
+        $storage = new InMemoryStorage;
+        $spy = new SpyEventDispatcher;
         $engine = new WorkflowEngine($storage, $spy);
 
         $definition = [

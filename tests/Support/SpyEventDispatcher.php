@@ -18,6 +18,7 @@ class SpyEventDispatcher implements EventDispatcher
      * Get all dispatched events of a given class.
      *
      * @template T of object
+     *
      * @param class-string<T> $eventClass
      * @return array<int, T>
      */

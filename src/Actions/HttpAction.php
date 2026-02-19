@@ -53,7 +53,7 @@ class HttpAction extends BaseAction
 
             // Build query string for GET requests
             if ($method === 'GET' && ! empty($data)) {
-                $url .= '?' . http_build_query($data);
+                $url .= '?'.http_build_query($data);
             }
 
             curl_setopt($ch, CURLOPT_URL, $url);

@@ -395,5 +395,4 @@ final class WorkflowDefinition
             metadata: $data['metadata'] ?? []
         );
     }
-
 }
