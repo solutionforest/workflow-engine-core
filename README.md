@@ -127,7 +127,72 @@ $workflow = WorkflowBuilder::quick()->orderProcessing();
 $workflow = WorkflowBuilder::quick()->documentApproval();
 ```
 
-### Retry, Timeout & Conditions
+### PHP 8.3+ Attributes
+
+Use native PHP attributes to configure actions with retry, timeout, and conditions:
+
+#### Retry Logic
+```php
+use SolutionForest\WorkflowEngine\Attributes\Retry;
+
+#[Retry(attempts: 3, backoff: 'exponential', delay: 1000)]
+class ReliableApiAction extends BaseAction
+{
+    public function execute(WorkflowContext $context): ActionResult
+    {
+        // Retries up to 3 times with exponential backoff starting at 1s
+        return ActionResult::success();
+    }
+}
+```
+
+#### Timeouts
+```php
+use SolutionForest\WorkflowEngine\Attributes\Timeout;
+
+#[Timeout(seconds: 30)]
+class TimedAction extends BaseAction
+{
+    public function execute(WorkflowContext $context): ActionResult
+    {
+        // Will timeout after 30 seconds
+        return ActionResult::success();
+    }
+}
+```
+
+#### Conditional Execution
+```php
+use SolutionForest\WorkflowEngine\Attributes\Condition;
+
+#[Condition('order.amount > 100')]
+class PremiumProcessingAction extends BaseAction
+{
+    public function execute(WorkflowContext $context): ActionResult
+    {
+        // Only executes when order.amount > 100
+        return ActionResult::success();
+    }
+}
+```
+
+#### Step Metadata
+```php
+use SolutionForest\WorkflowEngine\Attributes\WorkflowStep;
+
+#[WorkflowStep(id: 'send_email', name: 'Send Welcome Email', description: 'Sends a welcome email to the new user')]
+class SendWelcomeEmailAction extends BaseAction
+{
+    public function execute(WorkflowContext $context): ActionResult
+    {
+        return ActionResult::success();
+    }
+}
+```
+
+### Retry, Timeout & Conditions via Builder
+
+These features can also be configured through the fluent builder API:
 
 ```php
 // Steps with retry and timeout configured via builder
