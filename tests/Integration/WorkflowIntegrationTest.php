@@ -103,8 +103,16 @@ test('it can handle workflow cancellation', function () {
         ],
     ];
 
-    // Start workflow
-    $workflowId = $this->engine->start('cancellable-workflow', $definition);
+    // Create a workflow in RUNNING state so it can be cancelled
+    $parser = new \SolutionForest\WorkflowEngine\Core\DefinitionParser;
+    $workflowDef = $parser->parse($definition);
+    $workflowId = 'cancellable-workflow';
+    $instance = new \SolutionForest\WorkflowEngine\Core\WorkflowInstance(
+        id: $workflowId,
+        definition: $workflowDef,
+        state: \SolutionForest\WorkflowEngine\Core\WorkflowState::RUNNING,
+    );
+    $this->storage->save($instance);
 
     // Cancel workflow
     $this->engine->cancel($workflowId, 'User requested cancellation');
@@ -131,25 +139,35 @@ test('it can list and filter workflows', function () {
 
     // Start two workflows
     $workflow1Id = $this->engine->start('list-test-1', $definition1);
-    $workflow2Id = $this->engine->start('list-test-2', $definition2);
+
+    // For the second one, create it in RUNNING state so we can cancel it
+    $parser = new \SolutionForest\WorkflowEngine\Core\DefinitionParser;
+    $workflowDef = $parser->parse($definition2);
+    $workflow2Id = 'list-test-2';
+    $instance = new \SolutionForest\WorkflowEngine\Core\WorkflowInstance(
+        id: $workflow2Id,
+        definition: $workflowDef,
+        state: \SolutionForest\WorkflowEngine\Core\WorkflowState::RUNNING,
+    );
+    $this->storage->save($instance);
 
     // Cancel one
     $this->engine->cancel($workflow2Id);
 
     // List all workflows
-    $allWorkflows = $this->engine->listWorkflows();
+    $allWorkflows = $this->engine->getInstances();
     expect(count($allWorkflows))->toBeGreaterThanOrEqual(2);
 
     // Filter by state
-    $completedWorkflows = $this->engine->listWorkflows(['state' => WorkflowState::COMPLETED]);
-    $cancelledWorkflows = $this->engine->listWorkflows(['state' => WorkflowState::CANCELLED]);
+    $completedWorkflows = $this->engine->getInstances(['state' => WorkflowState::COMPLETED]);
+    $cancelledWorkflows = $this->engine->getInstances(['state' => WorkflowState::CANCELLED]);
 
     expect(count($completedWorkflows))->toBeGreaterThanOrEqual(1);
     expect(count($cancelledWorkflows))->toBeGreaterThanOrEqual(1);
 
     // Verify specific workflows exist in filtered results
-    $completedIds = array_column($completedWorkflows, 'workflow_id');
-    $cancelledIds = array_column($cancelledWorkflows, 'workflow_id');
+    $completedIds = array_map(fn ($w) => $w->getId(), $completedWorkflows);
+    $cancelledIds = array_map(fn ($w) => $w->getId(), $cancelledWorkflows);
 
     expect($completedIds)->toContain($workflow1Id);
     expect($cancelledIds)->toContain($workflow2Id);

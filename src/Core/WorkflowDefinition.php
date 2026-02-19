@@ -3,7 +3,7 @@
 namespace SolutionForest\WorkflowEngine\Core;
 
 use SolutionForest\WorkflowEngine\Exceptions\InvalidWorkflowDefinitionException;
-use SolutionForest\WorkflowEngine\Support\Arr;
+use SolutionForest\WorkflowEngine\Support\ConditionEvaluator;
 
 /**
  * Represents a complete workflow definition with steps, transitions, and metadata.
@@ -323,28 +323,7 @@ final class WorkflowDefinition
      */
     private function evaluateCondition(string $condition, array $data): bool
     {
-        // Enhanced condition evaluation with comprehensive operator support
-        if (preg_match('/(\w+(?:\.\w+)*)\s*(===|!==|>=|<=|==|!=|>|<)\s*(.+)/', $condition, $matches)) {
-            $key = $matches[1];
-            $operator = $matches[2];
-            $value = trim($matches[3], '"\'');
-
-            $dataValue = Arr::get($data, $key);
-
-            return match ($operator) {
-                '===' => $dataValue === $value,
-                '!==' => $dataValue !== $value,
-                '>=' => $dataValue >= $value,
-                '<=' => $dataValue <= $value,
-                '==' => $dataValue == $value,
-                '!=' => $dataValue != $value,
-                '>' => $dataValue > $value,
-                '<' => $dataValue < $value,
-                default => false,
-            };
-        }
-
-        return false; // Default to false if condition cannot be parsed
+        return ConditionEvaluator::evaluate($condition, $data);
     }
 
     /**

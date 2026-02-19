@@ -108,7 +108,7 @@ class SimpleWorkflow
     public function runAction(string $actionClass, array $context = []): string
     {
         return $this->sequential(
-            'single_action_'.class_basename($actionClass),
+            'single_action_'.Arr::classBasename($actionClass),
             [$actionClass],
             $context
         );

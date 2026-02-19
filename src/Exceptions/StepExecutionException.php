@@ -4,6 +4,7 @@ namespace SolutionForest\WorkflowEngine\Exceptions;
 
 use SolutionForest\WorkflowEngine\Core\Step;
 use SolutionForest\WorkflowEngine\Core\WorkflowContext;
+use SolutionForest\WorkflowEngine\Support\Arr;
 
 /**
  * Thrown when a workflow step fails during execution.
@@ -81,7 +82,7 @@ final class StepExecutionException extends WorkflowException
     public function getUserMessage(): string
     {
         $stepName = $this->step->getId();
-        $actionClass = class_basename($this->step->getActionClass());
+        $actionClass = Arr::classBasename($this->step->getActionClass());
 
         return "The workflow step '{$stepName}' (using {$actionClass}) failed to execute. ".
                'This may be due to invalid input data, external service issues, or configuration problems.';

@@ -6,7 +6,5 @@ parameters:
     ignoreErrors:
         - '#has no value type specified in iterable type array#'
         - '#Match arm comparison between .+ and .+ is always true#'
-        - '#has parameter .+ with no type specified#'
-        - '#has no return type specified#'
         - '#PHPDoc tag @param for parameter .+ with type .+ is not subtype of native type#'
         - '#Parameter .+ has invalid type#'

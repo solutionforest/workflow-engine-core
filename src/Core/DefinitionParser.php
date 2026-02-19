@@ -396,7 +396,7 @@ class DefinitionParser
 
             foreach ($stepData['conditions'] as $conditionIndex => $condition) {
                 if (! is_string($condition) || empty(trim($condition))) {
-                    throw InvalidWorkflowDefinitionException::invalidCondition($condition);
+                    throw InvalidWorkflowDefinitionException::invalidCondition($condition, 'Condition cannot be empty.');
                 }
             }
         }
@@ -512,7 +512,7 @@ class DefinitionParser
         // Validate optional condition field
         if (isset($transition['condition'])) {
             if (! is_string($transition['condition']) || empty(trim($transition['condition']))) {
-                throw InvalidWorkflowDefinitionException::invalidCondition($transition['condition']);
+                throw InvalidWorkflowDefinitionException::invalidCondition($transition['condition'], 'Condition cannot be empty.');
             }
         }
 

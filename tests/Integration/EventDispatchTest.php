@@ -106,7 +106,16 @@ describe('Event Dispatching', function () {
             ],
         ];
 
-        $id = $engine->start('event-test-4', $definition);
+        // Create a workflow in RUNNING state so it can be cancelled
+        $parser = new \SolutionForest\WorkflowEngine\Core\DefinitionParser;
+        $workflowDef = $parser->parse($definition);
+        $id = 'event-test-4';
+        $instance = new \SolutionForest\WorkflowEngine\Core\WorkflowInstance(
+            id: $id,
+            definition: $workflowDef,
+            state: \SolutionForest\WorkflowEngine\Core\WorkflowState::RUNNING,
+        );
+        $storage->save($instance);
 
         $spy->reset();
         $engine->cancel($id, 'testing cancellation');

@@ -2,6 +2,8 @@
 
 namespace SolutionForest\WorkflowEngine\Core;
 
+use SolutionForest\WorkflowEngine\Exceptions\InvalidWorkflowStateException;
+
 /**
  * Represents an active instance of a workflow execution.
  *
@@ -175,6 +177,15 @@ final class WorkflowInstance
      */
     public function setState(WorkflowState $state): void
     {
+        if (! $this->state->canTransitionTo($state)) {
+            throw new InvalidWorkflowStateException(
+                "Cannot transition workflow '{$this->id}' from '{$this->state->value}' to '{$state->value}'",
+                $this->state,
+                $state,
+                $this->id
+            );
+        }
+
         $this->state = $state;
         $this->updatedAt = new \DateTime;
     }

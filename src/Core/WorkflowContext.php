@@ -3,6 +3,7 @@
 namespace SolutionForest\WorkflowEngine\Core;
 
 use DateTime;
+use SolutionForest\WorkflowEngine\Support\Arr;
 
 /**
  * Immutable workflow execution context using PHP 8.3+ readonly properties.
@@ -111,7 +112,7 @@ final readonly class WorkflowContext
             return $this->data;
         }
 
-        return data_get($this->data, $key, $default);
+        return Arr::get($this->data, $key, $default);
     }
 
     /**
@@ -173,7 +174,7 @@ final readonly class WorkflowContext
     public function with(string $key, mixed $value): static
     {
         $newData = $this->data;
-        data_set($newData, $key, $value);
+        Arr::set($newData, $key, $value);
 
         return new self(
             workflowId: $this->workflowId,
@@ -206,7 +207,7 @@ final readonly class WorkflowContext
      */
     public function hasData(string $key): bool
     {
-        return data_get($this->data, $key) !== null;
+        return Arr::get($this->data, $key) !== null;
     }
 
     /**
@@ -229,7 +230,7 @@ final readonly class WorkflowContext
             return $this->config;
         }
 
-        return data_get($this->config, $key, $default);
+        return Arr::get($this->config, $key, $default);
     }
 
     /**

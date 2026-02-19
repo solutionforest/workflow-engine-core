@@ -6,6 +6,7 @@ use SolutionForest\WorkflowEngine\Attributes\Condition;
 use SolutionForest\WorkflowEngine\Attributes\WorkflowStep;
 use SolutionForest\WorkflowEngine\Core\ActionResult;
 use SolutionForest\WorkflowEngine\Core\WorkflowContext;
+use SolutionForest\WorkflowEngine\Support\Arr;
 
 /**
  * Condition evaluation action with advanced expression parsing
@@ -116,7 +117,7 @@ class ConditionAction extends BaseAction
             'true', 'yes' => true,
             'false', 'no' => false,
             'null', 'empty' => null,
-            default => data_get($data, $expression)
+            default => Arr::get($data, $expression)
         };
     }
 }

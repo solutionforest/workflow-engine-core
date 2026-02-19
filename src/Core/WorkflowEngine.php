@@ -6,7 +6,6 @@ use SolutionForest\WorkflowEngine\Contracts\EventDispatcher;
 use SolutionForest\WorkflowEngine\Contracts\StorageAdapter;
 use SolutionForest\WorkflowEngine\Events\WorkflowCancelledEvent;
 use SolutionForest\WorkflowEngine\Events\WorkflowStartedEvent;
-use SolutionForest\WorkflowEngine\Exceptions\InvalidWorkflowDefinitionException;
 use SolutionForest\WorkflowEngine\Exceptions\InvalidWorkflowStateException;
 use SolutionForest\WorkflowEngine\Exceptions\WorkflowInstanceNotFoundException;
 
@@ -95,7 +94,7 @@ class WorkflowEngine
      * @param array<string, mixed> $context Initial context data for the workflow
      * @return string The workflow instance ID
      *
-     * @throws InvalidWorkflowDefinitionException If the workflow definition is invalid
+     * @throws \SolutionForest\WorkflowEngine\Exceptions\InvalidWorkflowDefinitionException If the workflow definition is invalid
      * @throws \RuntimeException If the workflow cannot be started due to system issues
      *
      * @example Starting a simple workflow
@@ -250,6 +249,16 @@ class WorkflowEngine
     public function cancel(string $instanceId, string $reason = ''): WorkflowInstance
     {
         $instance = $this->stateManager->load($instanceId);
+
+        if ($instance->getState()->isFinished()) {
+            throw new InvalidWorkflowStateException(
+                "Cannot cancel workflow '{$instanceId}' because it is in '{$instance->getState()->value}' state",
+                $instance->getState(),
+                WorkflowState::CANCELLED,
+                $instanceId
+            );
+        }
+
         $instance->setState(WorkflowState::CANCELLED);
         $this->stateManager->save($instance);
 

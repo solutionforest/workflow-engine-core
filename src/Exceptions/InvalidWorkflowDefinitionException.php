@@ -219,11 +219,12 @@ final class InvalidWorkflowDefinitionException extends WorkflowException
      * Create exception for invalid condition expression.
      *
      * @param string $condition The invalid condition expression
+     * @param string $reason The reason why the condition is invalid
      */
-    public static function invalidCondition(string $condition): static
+    public static function invalidCondition(string $condition, string $reason): static
     {
         return new self(
-            message: "Invalid condition expression: '{$condition}'. Condition cannot be empty.",
+            message: "Invalid condition expression: '{$condition}'. {$reason}",
             definition: ['provided_condition' => $condition],
             validationErrors: [
                 'Use valid condition expressions with comparison operators',

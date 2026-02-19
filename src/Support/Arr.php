@@ -26,6 +26,16 @@ final class Arr
     }
 
     /**
+     * Get the class "basename" of a class string (without namespace).
+     */
+    public static function classBasename(string $class): string
+    {
+        $parts = explode('\\', $class);
+
+        return end($parts);
+    }
+
+    /**
      * Set a value in a nested array using dot notation.
      *
      * @param array<string, mixed> $array
