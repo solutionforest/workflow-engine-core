@@ -4,8 +4,6 @@ parameters:
         - src
     tmpDir: build/phpstan
     ignoreErrors:
-        - '#Function (data_get|data_set|class_basename) not found#'
-        - '#Call to static method timeout\(\) on an unknown class Illuminate\\Support\\Facades\\Http#'
         - '#has no value type specified in iterable type array#'
         - '#Match arm comparison between .+ and .+ is always true#'
         - '#has parameter .+ with no type specified#'

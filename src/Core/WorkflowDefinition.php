@@ -3,6 +3,7 @@
 namespace SolutionForest\WorkflowEngine\Core;
 
 use SolutionForest\WorkflowEngine\Exceptions\InvalidWorkflowDefinitionException;
+use SolutionForest\WorkflowEngine\Support\Arr;
 
 /**
  * Represents a complete workflow definition with steps, transitions, and metadata.
@@ -328,7 +329,7 @@ final class WorkflowDefinition
             $operator = $matches[2];
             $value = trim($matches[3], '"\'');
 
-            $dataValue = $this->getNestedValue($data, $key);
+            $dataValue = Arr::get($data, $key);
 
             return match ($operator) {
                 '===' => $dataValue === $value,
@@ -395,28 +396,4 @@ final class WorkflowDefinition
         );
     }
 
-    /**
-     * Get a nested value from an array using dot notation.
-     *
-     * @param array<string, mixed> $array
-     */
-    private function getNestedValue(array $array, string $key, $default = null)
-    {
-        if (isset($array[$key])) {
-            return $array[$key];
-        }
-
-        // Handle dot notation for nested arrays
-        $keys = explode('.', $key);
-        $value = $array;
-
-        foreach ($keys as $nestedKey) {
-            if (! is_array($value) || ! array_key_exists($nestedKey, $value)) {
-                return $default;
-            }
-            $value = $value[$nestedKey];
-        }
-
-        return $value;
-    }
 }

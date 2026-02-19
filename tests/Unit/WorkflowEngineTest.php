@@ -30,7 +30,7 @@ test('it can start a workflow', function () {
     expect($workflowId)->not->toBeEmpty();
 
     // Verify the workflow instance was created
-    $instance = $this->engine->getWorkflow($workflowId);
+    $instance = $this->engine->getInstance($workflowId);
     expect($instance)->toBeInstanceOf(WorkflowInstance::class);
     expect($instance->getState())->toBe(WorkflowState::COMPLETED); // Log action completes immediately
     expect($instance->getName())->toBe('Test Workflow');
@@ -52,7 +52,7 @@ test('it can start a workflow with context', function () {
     $context = ['name' => 'John'];
     $workflowId = $this->engine->start('test-workflow', $definition, $context);
 
-    $instance = $this->engine->getWorkflow($workflowId);
+    $instance = $this->engine->getInstance($workflowId);
     $workflowData = $instance->getContext()->getData();
 
     // Should contain original context plus any data added by actions
@@ -94,7 +94,7 @@ test('it can resume a paused workflow', function () {
     // Resume it
     $this->engine->resume($workflowId);
 
-    $instance = $this->engine->getWorkflow($workflowId);
+    $instance = $this->engine->getInstance($workflowId);
     // After resume, it should be completed since we have simple log actions
     expect($instance->getState())->toBe(WorkflowState::COMPLETED);
 });
@@ -115,7 +115,7 @@ test('it can cancel a workflow', function () {
     $workflowId = $this->engine->start('test-workflow', $definition);
     $this->engine->cancel($workflowId, 'User cancelled');
 
-    $instance = $this->engine->getWorkflow($workflowId);
+    $instance = $this->engine->getInstance($workflowId);
     expect($instance->getState())->toBe(WorkflowState::CANCELLED);
 });
 
@@ -151,7 +151,7 @@ test('it throws exception for invalid workflow definition', function () {
 })->throws(InvalidWorkflowDefinitionException::class, 'Required field \'name\' is missing from workflow definition');
 
 test('it throws exception for nonexistent workflow', function () {
-    $this->engine->getWorkflow('nonexistent');
+    $this->engine->getInstance('nonexistent');
 })->throws(WorkflowInstanceNotFoundException::class, 'Workflow instance \'nonexistent\' was not found');
 
 test('it can list workflows', function () {
@@ -170,11 +170,11 @@ test('it can list workflows', function () {
     $workflowId1 = $this->engine->start('test-workflow-1', $definition);
     $workflowId2 = $this->engine->start('test-workflow-2', $definition);
 
-    $workflows = $this->engine->listWorkflows();
+    $workflows = $this->engine->getInstances();
 
     expect($workflows)->toHaveCount(2);
-    expect(array_column($workflows, 'workflow_id'))->toContain($workflowId1);
-    expect(array_column($workflows, 'workflow_id'))->toContain($workflowId2);
+    expect(array_map(fn ($w) => $w->getId(), $workflows))->toContain($workflowId1);
+    expect(array_map(fn ($w) => $w->getId(), $workflows))->toContain($workflowId2);
 });
 
 test('it can filter workflows by state', function () {

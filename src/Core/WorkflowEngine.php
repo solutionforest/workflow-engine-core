@@ -4,8 +4,8 @@ namespace SolutionForest\WorkflowEngine\Core;
 
 use SolutionForest\WorkflowEngine\Contracts\EventDispatcher;
 use SolutionForest\WorkflowEngine\Contracts\StorageAdapter;
-use SolutionForest\WorkflowEngine\Events\WorkflowCancelled;
-use SolutionForest\WorkflowEngine\Events\WorkflowStarted;
+use SolutionForest\WorkflowEngine\Events\WorkflowCancelledEvent;
+use SolutionForest\WorkflowEngine\Events\WorkflowStartedEvent;
 use SolutionForest\WorkflowEngine\Exceptions\InvalidWorkflowDefinitionException;
 use SolutionForest\WorkflowEngine\Exceptions\InvalidWorkflowStateException;
 use SolutionForest\WorkflowEngine\Exceptions\WorkflowInstanceNotFoundException;
@@ -132,9 +132,8 @@ class WorkflowEngine
         $this->stateManager->save($instance);
 
         // Dispatch start event
-        $this->dispatchEvent(new WorkflowStarted(
-            $instance->getId(),
-            $instance->getDefinition()->getName(),
+        $this->dispatchEvent(new WorkflowStartedEvent(
+            $instance,
             $context
         ));
 
@@ -237,6 +236,11 @@ class WorkflowEngine
      */
     public function getInstances(array $filters = []): array
     {
+        // Convert WorkflowState enum to string value for storage layer
+        if (isset($filters['state']) && $filters['state'] instanceof WorkflowState) {
+            $filters['state'] = $filters['state']->value;
+        }
+
         return $this->storage->findInstances($filters);
     }
 
@@ -250,9 +254,8 @@ class WorkflowEngine
         $this->stateManager->save($instance);
 
         // Dispatch cancel event
-        $this->dispatchEvent(new WorkflowCancelled(
-            $instance->getId(),
-            $instance->getDefinition()->getName(),
+        $this->dispatchEvent(new WorkflowCancelledEvent(
+            $instance,
             $reason
         ));
 
@@ -260,19 +263,11 @@ class WorkflowEngine
     }
 
     /**
-     * Get workflow instance by ID
-     */
-    public function getWorkflow(string $workflowId): WorkflowInstance
-    {
-        return $this->stateManager->load($workflowId);
-    }
-
-    /**
      * Get workflow status
      */
     public function getStatus(string $workflowId): array
     {
-        $instance = $this->getWorkflow($workflowId);
+        $instance = $this->getInstance($workflowId);
 
         return [
             'workflow_id' => $instance->getId(),
@@ -283,34 +278,6 @@ class WorkflowEngine
             'created_at' => $instance->getCreatedAt(),
             'updated_at' => $instance->getUpdatedAt(),
         ];
-    }
-
-    /**
-     * List workflows with optional filters
-     *
-     * @param array<string, mixed> $filters
-     * @return array<int, array<string, mixed>>
-     */
-    public function listWorkflows(array $filters = []): array
-    {
-        // Convert WorkflowState enum to string value for storage layer
-        if (isset($filters['state']) && $filters['state'] instanceof WorkflowState) {
-            $filters['state'] = $filters['state']->value;
-        }
-
-        $instances = $this->storage->findInstances($filters);
-
-        return array_map(function (WorkflowInstance $instance) {
-            return [
-                'workflow_id' => $instance->getId(),
-                'name' => $instance->getDefinition()->getName(),
-                'state' => $instance->getState()->value,
-                'current_step' => $instance->getCurrentStepId(),
-                'progress' => $instance->getProgress(),
-                'created_at' => $instance->getCreatedAt(),
-                'updated_at' => $instance->getUpdatedAt(),
-            ];
-        }, $instances);
     }
 
     /**

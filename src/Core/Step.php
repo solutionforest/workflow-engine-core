@@ -2,6 +2,8 @@
 
 namespace SolutionForest\WorkflowEngine\Core;
 
+use SolutionForest\WorkflowEngine\Support\Arr;
+
 /**
  * Represents a single step in a workflow with complete configuration and execution metadata.
  *
@@ -226,7 +228,7 @@ class Step
             $operator = $matches[2];
             $value = trim($matches[3], '"\'');
 
-            $dataValue = data_get($data, $key);
+            $dataValue = Arr::get($data, $key);
 
             return match ($operator) {
                 '===' => $dataValue === $value,
