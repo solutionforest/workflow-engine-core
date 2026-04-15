@@ -402,24 +402,102 @@ final class WorkflowInstance
     /**
      * Create a workflow instance from an array representation.
      *
+     * Validates that the stored payload is well-formed: every `completed_steps`
+     * and `failed_steps` entry must reference a step that exists in the
+     * definition, and the restored state must be a valid WorkflowState value.
+     * Corrupt or foreign payloads throw InvalidWorkflowStateException so that
+     * callers don't silently resume broken instances.
+     *
      * @param array<string, mixed> $data Array data to restore from
      * @param WorkflowDefinition $definition The workflow definition
      * @return static Restored workflow instance
+     *
+     * @throws InvalidWorkflowStateException If the payload is structurally invalid
      */
     public static function fromArray(array $data, WorkflowDefinition $definition): static
     {
+        if (! isset($data['id']) || ! is_string($data['id']) || $data['id'] === '') {
+            throw new InvalidWorkflowStateException(
+                'Cannot restore workflow instance: missing or invalid "id" field.',
+                WorkflowState::PENDING,
+                WorkflowState::PENDING,
+                (string) ($data['id'] ?? '')
+            );
+        }
+
+        if (! isset($data['state']) || ! is_string($data['state'])) {
+            throw new InvalidWorkflowStateException(
+                "Cannot restore workflow instance '{$data['id']}': missing or invalid \"state\" field.",
+                WorkflowState::PENDING,
+                WorkflowState::PENDING,
+                $data['id']
+            );
+        }
+
+        $state = WorkflowState::tryFrom($data['state']);
+        if ($state === null) {
+            throw new InvalidWorkflowStateException(
+                "Cannot restore workflow instance '{$data['id']}': unknown state '{$data['state']}'.",
+                WorkflowState::PENDING,
+                WorkflowState::PENDING,
+                $data['id']
+            );
+        }
+
+        $completedSteps = $data['completed_steps'] ?? [];
+        $failedSteps = $data['failed_steps'] ?? [];
+
+        if (! is_array($completedSteps) || ! array_is_list($completedSteps)) {
+            throw new InvalidWorkflowStateException(
+                "Cannot restore workflow instance '{$data['id']}': \"completed_steps\" must be a list.",
+                $state,
+                $state,
+                $data['id']
+            );
+        }
+
+        foreach ($completedSteps as $stepId) {
+            if (! is_string($stepId) || ! $definition->hasStep($stepId)) {
+                throw new InvalidWorkflowStateException(
+                    "Cannot restore workflow instance '{$data['id']}': completed step '".(is_string($stepId) ? $stepId : gettype($stepId))."' is not defined in the workflow.",
+                    $state,
+                    $state,
+                    $data['id']
+                );
+            }
+        }
+
+        if (! is_array($failedSteps)) {
+            throw new InvalidWorkflowStateException(
+                "Cannot restore workflow instance '{$data['id']}': \"failed_steps\" must be an array.",
+                $state,
+                $state,
+                $data['id']
+            );
+        }
+
+        $currentStepId = $data['current_step_id'] ?? null;
+        if ($currentStepId !== null && (! is_string($currentStepId) || ! $definition->hasStep($currentStepId))) {
+            throw new InvalidWorkflowStateException(
+                "Cannot restore workflow instance '{$data['id']}': current step '".(is_string($currentStepId) ? $currentStepId : gettype($currentStepId))."' is not defined in the workflow.",
+                $state,
+                $state,
+                $data['id']
+            );
+        }
+
         $instance = new self(
             id: $data['id'],
             definition: $definition,
-            state: WorkflowState::from($data['state']),
+            state: $state,
             data: $data['data'] ?? [],
             createdAt: new \DateTime($data['created_at']),
             updatedAt: new \DateTime($data['updated_at'])
         );
 
-        $instance->currentStepId = $data['current_step_id'] ?? null;
-        $instance->completedSteps = $data['completed_steps'] ?? [];
-        $instance->failedSteps = $data['failed_steps'] ?? [];
+        $instance->currentStepId = $currentStepId;
+        $instance->completedSteps = $completedSteps;
+        $instance->failedSteps = $failedSteps;
         $instance->errorMessage = $data['error_message'] ?? null;
 
         return $instance;

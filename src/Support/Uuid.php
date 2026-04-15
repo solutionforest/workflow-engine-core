@@ -12,7 +12,7 @@ namespace SolutionForest\WorkflowEngine\Support;
  *
  * ## Features
  * - **RFC 4122 Compliant**: Generates valid UUID v4 strings
- * - **Cryptographically Random**: Uses mt_rand() for pseudo-random generation
+ * - **Cryptographically Random**: Uses random_bytes() for secure random generation
  * - **No Dependencies**: Pure PHP implementation without external libraries
  * - **Thread Safe**: Safe for concurrent usage in multi-threaded environments
  *
@@ -81,25 +81,21 @@ class Uuid
      */
     public static function v4(): string
     {
+        $bytes = random_bytes(16);
+
+        // Set version (4) and variant (DCE 1.1 / RFC 4122) bits.
+        $bytes[6] = chr((ord($bytes[6]) & 0x0F) | 0x40);
+        $bytes[8] = chr((ord($bytes[8]) & 0x3F) | 0x80);
+
+        $hex = bin2hex($bytes);
+
         return sprintf(
-            '%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
-            // 32 bits for "time_low"
-            mt_rand(0, 0xFFFF), mt_rand(0, 0xFFFF),
-
-            // 16 bits for "time_mid"
-            mt_rand(0, 0xFFFF),
-
-            // 16 bits for "time_hi_and_version",
-            // four most significant bits holds version number 4
-            mt_rand(0, 0x0FFF) | 0x4000,
-
-            // 16 bits, 8 bits for "clk_seq_hi_res",
-            // 8 bits for "clk_seq_low",
-            // two most significant bits holds zero and one for variant DCE1.1
-            mt_rand(0, 0x3FFF) | 0x8000,
-
-            // 48 bits for "node"
-            mt_rand(0, 0xFFFF), mt_rand(0, 0xFFFF), mt_rand(0, 0xFFFF)
+            '%s-%s-%s-%s-%s',
+            substr($hex, 0, 8),
+            substr($hex, 8, 4),
+            substr($hex, 12, 4),
+            substr($hex, 16, 4),
+            substr($hex, 20, 12)
         );
     }
 }

@@ -2,7 +2,6 @@
 
 namespace SolutionForest\WorkflowEngine\Actions;
 
-use SolutionForest\WorkflowEngine\Attributes\Condition;
 use SolutionForest\WorkflowEngine\Attributes\WorkflowStep;
 use SolutionForest\WorkflowEngine\Core\ActionResult;
 use SolutionForest\WorkflowEngine\Core\WorkflowContext;

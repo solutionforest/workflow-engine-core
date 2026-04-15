@@ -67,6 +67,14 @@ final class WorkflowBuilder
     private array $metadata = [];
 
     /**
+     * Monotonic counter used when auto-generating step IDs for sugar methods
+     * like then(), startWith(), email(), delay(), http(), and condition().
+     * Using a dedicated counter (instead of count($this->steps)) means explicit
+     * step IDs mixed with auto-generated ones can never collide.
+     */
+    private int $autoStepCounter = 0;
+
+    /**
      * Private constructor to enforce factory pattern usage.
      *
      * @param string $name The workflow name/identifier
@@ -237,9 +245,7 @@ final class WorkflowBuilder
         string|int|null $timeout = null,
         int $retryAttempts = 0
     ): self {
-        $stepId = 'step_'.(count($this->steps) + 1);
-
-        return $this->addStep($stepId, $action, $config, $timeout, $retryAttempts);
+        return $this->addStep($this->generateStepId('step'), $action, $config, $timeout, $retryAttempts);
     }
 
     /**
@@ -262,9 +268,7 @@ final class WorkflowBuilder
         string|int|null $timeout = null,
         int $retryAttempts = 0
     ): self {
-        $stepId = 'step_'.(count($this->steps) + 1);
-
-        return $this->addStep($stepId, $action, $config, $timeout, $retryAttempts);
+        return $this->addStep($this->generateStepId('step'), $action, $config, $timeout, $retryAttempts);
     }
 
     /**
@@ -331,7 +335,7 @@ final class WorkflowBuilder
         array $data = []
     ): self {
         return $this->addStep(
-            'email_'.count($this->steps),
+            $this->generateStepId('email'),
             'SolutionForest\\WorkflowEngine\\Actions\\EmailAction',
             [
                 'template' => $template,
@@ -370,7 +374,7 @@ final class WorkflowBuilder
         }
 
         return $this->addStep(
-            'delay_'.count($this->steps),
+            $this->generateStepId('delay'),
             'SolutionForest\\WorkflowEngine\\Actions\\DelayAction',
             ['seconds' => $totalSeconds]
         );
@@ -402,7 +406,7 @@ final class WorkflowBuilder
         array $headers = []
     ): self {
         return $this->addStep(
-            'http_'.count($this->steps),
+            $this->generateStepId('http'),
             'SolutionForest\\WorkflowEngine\\Actions\\HttpAction',
             [
                 'url' => $url,
@@ -427,10 +431,26 @@ final class WorkflowBuilder
     public function condition(string $condition): self
     {
         return $this->addStep(
-            'condition_'.count($this->steps),
+            $this->generateStepId('condition'),
             'SolutionForest\\WorkflowEngine\\Actions\\ConditionAction',
             ['condition' => $condition]
         );
+    }
+
+    /**
+     * Generate a unique auto step ID using the internal counter. Skips over
+     * any IDs that have already been claimed by explicit addStep() calls so
+     * the sugar methods cannot collide with user-defined IDs.
+     */
+    private function generateStepId(string $prefix): string
+    {
+        $existing = array_column($this->steps, 'id');
+
+        do {
+            $candidate = $prefix.'_'.(++$this->autoStepCounter);
+        } while (in_array($candidate, $existing, true));
+
+        return $candidate;
     }
 
     /**
