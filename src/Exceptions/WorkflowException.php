@@ -3,8 +3,6 @@
 namespace SolutionForest\WorkflowEngine\Exceptions;
 
 use Exception;
-use SolutionForest\WorkflowEngine\Core\WorkflowContext;
-use SolutionForest\WorkflowEngine\Core\WorkflowInstance;
 use Throwable;
 
 /**
@@ -102,52 +100,4 @@ abstract class WorkflowException extends Exception
      * @return string User-friendly error description
      */
     abstract public function getUserMessage(): string;
-
-    /**
-     * Create an exception from a workflow context.
-     *
-     * @param string $message The error message
-     * @param WorkflowContext $context The workflow context
-     * @param Throwable|null $previous Previous exception
-     * @return static The created exception instance
-     */
-    public static function fromContext(
-        string $message,
-        WorkflowContext $context,
-        ?Throwable $previous = null
-    ): static {
-        // @phpstan-ignore-next-line new.static
-        return new static($message, [
-            'workflow_id' => $context->getWorkflowId(),
-            'step_id' => $context->getStepId(),
-            'context_data' => $context->getData(),
-            'config' => $context->getConfig(),
-            'executed_at' => $context->executedAt->format('Y-m-d H:i:s'),
-        ], 0, $previous);
-    }
-
-    /**
-     * Create an exception from a workflow instance.
-     *
-     * @param string $message The error message
-     * @param WorkflowInstance $instance The workflow instance
-     * @param Throwable|null $previous Previous exception
-     * @return static The created exception instance
-     */
-    public static function fromInstance(
-        string $message,
-        WorkflowInstance $instance,
-        ?Throwable $previous = null
-    ): static {
-        // @phpstan-ignore-next-line new.static
-        return new static($message, [
-            'instance_id' => $instance->getId(),
-            'workflow_name' => $instance->getDefinition()->getName(),
-            'current_state' => $instance->getState()->value,
-            'current_step' => $instance->getCurrentStepId(),
-            'instance_data' => $instance->getData(),
-            'created_at' => $instance->getCreatedAt()->format('Y-m-d H:i:s'),
-            'updated_at' => $instance->getUpdatedAt()->format('Y-m-d H:i:s'),
-        ], 0, $previous);
-    }
 }
