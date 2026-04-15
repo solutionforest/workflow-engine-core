@@ -25,7 +25,7 @@ class FailNTimesAction extends BaseAction
         $failCount = $this->getConfig('fail_count', 0);
 
         if (self::$callCount <= $failCount) {
-            throw new \RuntimeException('Intentional failure #'.self::$callCount);
+            throw new RuntimeException('Intentional failure #'.self::$callCount);
         }
 
         return ActionResult::success(['attempts' => self::$callCount]);
@@ -47,7 +47,7 @@ class AlwaysFailAction extends BaseAction
 {
     protected function doExecute(WorkflowContext $context): ActionResult
     {
-        throw new \RuntimeException('Always fails');
+        throw new RuntimeException('Always fails');
     }
 
     public function getName(): string

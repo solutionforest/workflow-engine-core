@@ -84,7 +84,7 @@ class SimpleWorkflow
 
         $workflow = $builder->build();
 
-        return $this->engine->start($name.'_'.uniqid(), $workflow->toArray(), $context);
+        return $this->engine->start($name.'_'.Uuid::v4(), $workflow->toArray(), $context);
     }
 
     /**
@@ -163,7 +163,7 @@ class SimpleWorkflow
         $workflow = $builder->build();
 
         return $this->engine->start(
-            $workflow->getName().'_'.uniqid(),
+            $workflow->getName().'_'.Uuid::v4(),
             $workflow->toArray(),
             $context
         );

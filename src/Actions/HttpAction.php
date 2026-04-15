@@ -37,7 +37,10 @@ class HttpAction extends BaseAction
         $method = strtoupper($this->getConfig('method', 'GET'));
         $data = $this->getConfig('data', []);
         $headers = $this->getConfig('headers', []);
-        $timeout = $this->getConfig('timeout', 30);
+        $timeout = (int) $this->getConfig('timeout', 30);
+        $connectTimeout = (int) $this->getConfig('connect_timeout', min(10, $timeout));
+        $verifyTls = (bool) $this->getConfig('verify_tls', true);
+        $maxRedirects = (int) $this->getConfig('max_redirects', 3);
 
         if (! $url) {
             return ActionResult::failure('URL is required for HTTP action');
@@ -59,7 +62,22 @@ class HttpAction extends BaseAction
             curl_setopt($ch, CURLOPT_URL, $url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
-            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $connectTimeout);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, $maxRedirects > 0);
+            curl_setopt($ch, CURLOPT_MAXREDIRS, $maxRedirects);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, $verifyTls);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, $verifyTls ? 2 : 0);
+            // Restrict redirects to HTTP/HTTPS so a Location header cannot
+            // hand the request off to file://, gopher://, etc. The constants
+            // were renamed in cURL 7.85 — prefer the new one when present.
+            if (defined('CURLOPT_PROTOCOLS_STR')) {
+                curl_setopt($ch, CURLOPT_PROTOCOLS_STR, 'http,https');
+                curl_setopt($ch, CURLOPT_REDIR_PROTOCOLS_STR, 'http,https');
+            } elseif (defined('CURLPROTO_HTTP') && defined('CURLPROTO_HTTPS')) {
+                $allowed = CURLPROTO_HTTP | CURLPROTO_HTTPS;
+                curl_setopt($ch, CURLOPT_PROTOCOLS, $allowed);
+                curl_setopt($ch, CURLOPT_REDIR_PROTOCOLS, $allowed);
+            }
 
             // Set HTTP method and body
             if ($method !== 'GET') {
@@ -99,9 +117,9 @@ class HttpAction extends BaseAction
             $error = curl_error($ch);
             curl_close($ch);
 
-            if ($error) {
+            if ($responseBody === false || $error) {
                 return ActionResult::failure(
-                    "HTTP request failed: {$error}",
+                    'HTTP request failed: '.($error ?: 'unknown cURL error'),
                     [
                         'error' => $error,
                         'url' => $url,
@@ -137,7 +155,7 @@ class HttpAction extends BaseAction
                 ]
             );
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return ActionResult::failure(
                 "HTTP request exception: {$e->getMessage()}",
                 [

@@ -1,5 +1,6 @@
 <?php
 
+use SolutionForest\WorkflowEngine\Core\DefinitionParser;
 use SolutionForest\WorkflowEngine\Core\WorkflowEngine;
 use SolutionForest\WorkflowEngine\Core\WorkflowInstance;
 use SolutionForest\WorkflowEngine\Core\WorkflowState;
@@ -82,7 +83,7 @@ test('it can resume a paused workflow', function () {
     ];
 
     // Create a paused workflow manually (bypass auto-execution)
-    $parser = new \SolutionForest\WorkflowEngine\Core\DefinitionParser;
+    $parser = new DefinitionParser;
     $workflowDef = $parser->parse($definition);
     $workflowId = 'test-workflow';
     $instance = new WorkflowInstance(
@@ -117,7 +118,7 @@ test('it can cancel a workflow', function () {
     ];
 
     // Create a workflow in RUNNING state (so it can be cancelled)
-    $parser = new \SolutionForest\WorkflowEngine\Core\DefinitionParser;
+    $parser = new DefinitionParser;
     $workflowDef = $parser->parse($definition);
     $workflowId = 'test-workflow';
     $instance = new WorkflowInstance(
@@ -208,7 +209,7 @@ test('it can filter workflows by state', function () {
     $completedId = $this->engine->start('completed-workflow', $definition);
 
     // Create a workflow in RUNNING state, then cancel it
-    $parser = new \SolutionForest\WorkflowEngine\Core\DefinitionParser;
+    $parser = new DefinitionParser;
     $workflowDef = $parser->parse($definition);
     $cancelledId = 'cancelled-workflow';
     $instance = new WorkflowInstance(

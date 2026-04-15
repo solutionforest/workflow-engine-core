@@ -29,7 +29,7 @@ class InMemoryStorage implements StorageAdapter
             return array_values($this->instances);
         }
 
-        return array_filter($this->instances, function ($instance) use ($criteria) {
+        $filtered = array_filter($this->instances, function ($instance) use ($criteria) {
             foreach ($criteria as $key => $value) {
                 // Simple implementation for basic filtering
                 if ($key === 'state' && $instance->getState()->value !== $value) {
@@ -39,6 +39,8 @@ class InMemoryStorage implements StorageAdapter
 
             return true;
         });
+
+        return array_values($filtered);
     }
 
     public function delete(string $id): void

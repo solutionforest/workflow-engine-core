@@ -1,5 +1,7 @@
 <?php
 
+use SolutionForest\WorkflowEngine\Core\DefinitionParser;
+use SolutionForest\WorkflowEngine\Core\WorkflowInstance;
 use SolutionForest\WorkflowEngine\Core\WorkflowState;
 
 test('it can execute a complete workflow', function () {
@@ -104,13 +106,13 @@ test('it can handle workflow cancellation', function () {
     ];
 
     // Create a workflow in RUNNING state so it can be cancelled
-    $parser = new \SolutionForest\WorkflowEngine\Core\DefinitionParser;
+    $parser = new DefinitionParser;
     $workflowDef = $parser->parse($definition);
     $workflowId = 'cancellable-workflow';
-    $instance = new \SolutionForest\WorkflowEngine\Core\WorkflowInstance(
+    $instance = new WorkflowInstance(
         id: $workflowId,
         definition: $workflowDef,
-        state: \SolutionForest\WorkflowEngine\Core\WorkflowState::RUNNING,
+        state: WorkflowState::RUNNING,
     );
     $this->storage->save($instance);
 
@@ -141,13 +143,13 @@ test('it can list and filter workflows', function () {
     $workflow1Id = $this->engine->start('list-test-1', $definition1);
 
     // For the second one, create it in RUNNING state so we can cancel it
-    $parser = new \SolutionForest\WorkflowEngine\Core\DefinitionParser;
+    $parser = new DefinitionParser;
     $workflowDef = $parser->parse($definition2);
     $workflow2Id = 'list-test-2';
-    $instance = new \SolutionForest\WorkflowEngine\Core\WorkflowInstance(
+    $instance = new WorkflowInstance(
         id: $workflow2Id,
         definition: $workflowDef,
-        state: \SolutionForest\WorkflowEngine\Core\WorkflowState::RUNNING,
+        state: WorkflowState::RUNNING,
     );
     $this->storage->save($instance);
 

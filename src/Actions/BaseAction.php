@@ -186,10 +186,10 @@ abstract class BaseAction implements WorkflowAction
             ]);
 
             throw $e;
-        } catch (\Exception $e) {
-            // Log and return failure result for general exceptions
-            // The Executor will convert this to a StepExecutionException with Step context
-            $this->logger->error('Action failed with unexpected exception', [
+        } catch (\Throwable $e) {
+            // Log and return failure result for general throwables (exceptions and errors).
+            // The Executor will convert this to a StepExecutionException with Step context.
+            $this->logger->error('Action failed with unexpected throwable', [
                 'action' => static::class,
                 'workflow_id' => $context->getWorkflowId(),
                 'step_id' => $context->getStepId(),
