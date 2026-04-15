@@ -8,7 +8,7 @@ final readonly class WorkflowFailedEvent
 {
     public function __construct(
         public WorkflowInstance $instance,
-        public \Exception $exception,
+        public \Throwable $exception,
     ) {}
 
     public function getWorkflowId(): string

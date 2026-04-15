@@ -198,14 +198,14 @@ final class StepExecutionException extends WorkflowException
     }
 
     /**
-     * Create a StepExecutionException from any other exception.
+     * Create a StepExecutionException from any other throwable.
      *
-     * @param \Exception $exception The original exception
+     * @param \Throwable $exception The original throwable
      * @param Step $step The step that failed
      * @param WorkflowContext $context The execution context
      */
     public static function fromException(
-        \Exception $exception,
+        \Throwable $exception,
         Step $step,
         WorkflowContext $context
     ): static {

@@ -200,6 +200,12 @@ final class WorkflowBuilder
             }
         }
 
+        // Auto-chain sequential steps by appending a transition from the previous step.
+        if (! empty($this->steps)) {
+            $previousId = $this->steps[array_key_last($this->steps)]['id'];
+            $this->transitions[] = ['from' => $previousId, 'to' => $id];
+        }
+
         $this->steps[] = [
             'id' => $id,
             'action' => is_string($action) ? $action : $action::class,
@@ -288,9 +294,12 @@ final class WorkflowBuilder
         $callback($this);
         $newStepsCount = count($this->steps);
 
-        // Mark new steps as conditional
+        // Mark new steps as conditional. Nested when() calls accumulate conditions
+        // so all must be true for the step to execute.
         for ($i = $originalStepsCount; $i < $newStepsCount; $i++) {
-            $this->steps[$i]['condition'] = $condition;
+            $existing = $this->steps[$i]['conditions'] ?? [];
+            $existing[] = $condition;
+            $this->steps[$i]['conditions'] = $existing;
         }
 
         return $this;
@@ -486,7 +495,7 @@ final class WorkflowBuilder
                 config: $stepData['config'],
                 timeout: $timeoutString,
                 retryAttempts: $stepData['retry_attempts'],
-                conditions: isset($stepData['condition']) ? [$stepData['condition']] : []
+                conditions: $stepData['conditions'] ?? []
             );
         }
 

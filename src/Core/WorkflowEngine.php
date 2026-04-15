@@ -6,6 +6,7 @@ use SolutionForest\WorkflowEngine\Contracts\EventDispatcher;
 use SolutionForest\WorkflowEngine\Contracts\StorageAdapter;
 use SolutionForest\WorkflowEngine\Events\WorkflowCancelledEvent;
 use SolutionForest\WorkflowEngine\Events\WorkflowStartedEvent;
+use SolutionForest\WorkflowEngine\Exceptions\InvalidWorkflowDefinitionException;
 use SolutionForest\WorkflowEngine\Exceptions\InvalidWorkflowStateException;
 use SolutionForest\WorkflowEngine\Exceptions\WorkflowInstanceNotFoundException;
 
@@ -94,7 +95,7 @@ class WorkflowEngine
      * @param array<string, mixed> $context Initial context data for the workflow
      * @return string The workflow instance ID
      *
-     * @throws \SolutionForest\WorkflowEngine\Exceptions\InvalidWorkflowDefinitionException If the workflow definition is invalid
+     * @throws InvalidWorkflowDefinitionException If the workflow definition is invalid
      * @throws \RuntimeException If the workflow cannot be started due to system issues
      *
      * @example Starting a simple workflow

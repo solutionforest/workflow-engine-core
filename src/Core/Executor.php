@@ -2,7 +2,6 @@
 
 namespace SolutionForest\WorkflowEngine\Core;
 
-use Exception;
 use SolutionForest\WorkflowEngine\Contracts\EventDispatcher;
 use SolutionForest\WorkflowEngine\Contracts\Logger;
 use SolutionForest\WorkflowEngine\Contracts\WorkflowAction;
@@ -121,7 +120,7 @@ class Executor
     {
         try {
             $this->processWorkflow($instance);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             $this->logger->error('Workflow execution failed', [
                 'workflow_id' => $instance->getId(),
                 'workflow_name' => $instance->getDefinition()->getName(),
@@ -134,7 +133,7 @@ class Executor
             $this->stateManager->setError($instance, $e->getMessage());
             $this->eventDispatcher->dispatch(new WorkflowFailedEvent($instance, $e));
 
-            // Re-throw the original exception to maintain the error context
+            // Re-throw the original throwable to maintain the error context
             throw $e;
         }
     }
@@ -206,6 +205,23 @@ class Executor
      */
     private function executeStep(WorkflowInstance $instance, Step $step): void
     {
+        // Evaluate step conditions. Steps whose conditions don't match the current
+        // workflow data are skipped (marked completed without running the action)
+        // so that downstream transitions continue to flow.
+        if (! $step->canExecute($instance->getData())) {
+            $this->logger->info('Skipping workflow step; conditions not met', [
+                'workflow_id' => $instance->getId(),
+                'step_id' => $step->getId(),
+                'conditions' => $step->getConditions(),
+            ]);
+
+            $instance->setCurrentStepId($step->getId());
+            $this->stateManager->markStepCompleted($instance, $step->getId());
+            $this->processWorkflow($instance);
+
+            return;
+        }
+
         $this->logger->info('Executing workflow step', [
             'workflow_id' => $instance->getId(),
             'workflow_name' => $instance->getDefinition()->getName(),
@@ -234,7 +250,7 @@ class Executor
             // Continue execution recursively
             $this->processWorkflow($instance);
 
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             $context = new WorkflowContext(
                 workflowId: $instance->getId(),
                 stepId: $step->getId(),
@@ -243,13 +259,11 @@ class Executor
                 instance: $instance
             );
 
-            // Create detailed step execution exception
-            $stepException = match (true) {
-                $e instanceof ActionNotFoundException => $e,
-                str_contains($e->getMessage(), 'does not exist') => ActionNotFoundException::classNotFound($step->getActionClass(), $step, $context),
-                str_contains($e->getMessage(), 'must implement') => ActionNotFoundException::invalidInterface($step->getActionClass(), $step, $context),
-                default => StepExecutionException::fromException($e, $step, $context)
-            };
+            // Wrap non-typed throwables in a StepExecutionException while preserving
+            // ActionNotFoundException (and other domain exceptions) as-is.
+            $stepException = $e instanceof ActionNotFoundException
+                ? $e
+                : StepExecutionException::fromException($e, $step, $context);
 
             $this->logger->error('Workflow step execution failed', [
                 'workflow_id' => $instance->getId(),
@@ -296,7 +310,7 @@ class Executor
                 $this->executeAction($instance, $step);
 
                 return; // Success — exit retry loop
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 $lastException = $e;
 
                 if ($attempt === $maxAttempts) {
@@ -366,7 +380,7 @@ class Executor
             pcntl_alarm(0);
 
             return $result;
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             pcntl_alarm(0);
 
             throw $e;

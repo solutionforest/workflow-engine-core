@@ -1,6 +1,9 @@
 <?php
 
+use SolutionForest\WorkflowEngine\Core\DefinitionParser;
 use SolutionForest\WorkflowEngine\Core\WorkflowEngine;
+use SolutionForest\WorkflowEngine\Core\WorkflowInstance;
+use SolutionForest\WorkflowEngine\Core\WorkflowState;
 use SolutionForest\WorkflowEngine\Tests\Support\InMemoryStorage;
 use SolutionForest\WorkflowEngine\Tests\Support\SpyEventDispatcher;
 
@@ -107,13 +110,13 @@ describe('Event Dispatching', function () {
         ];
 
         // Create a workflow in RUNNING state so it can be cancelled
-        $parser = new \SolutionForest\WorkflowEngine\Core\DefinitionParser;
+        $parser = new DefinitionParser;
         $workflowDef = $parser->parse($definition);
         $id = 'event-test-4';
-        $instance = new \SolutionForest\WorkflowEngine\Core\WorkflowInstance(
+        $instance = new WorkflowInstance(
             id: $id,
             definition: $workflowDef,
-            state: \SolutionForest\WorkflowEngine\Core\WorkflowState::RUNNING,
+            state: WorkflowState::RUNNING,
         );
         $storage->save($instance);
 
