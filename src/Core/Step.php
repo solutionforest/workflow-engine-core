@@ -16,7 +16,6 @@ use SolutionForest\WorkflowEngine\Support\ConditionEvaluator;
  * - **Configuration**: Step-specific parameters and settings
  * - **Resilience**: Timeout and retry configuration for robust execution
  * - **Conditional Logic**: Support for conditional step execution
- * - **Compensation**: Rollback actions for error scenarios
  *
  * ## Usage Examples
  *
@@ -62,7 +61,6 @@ class Step
      * @param array<string, mixed> $config Step-specific configuration parameters
      * @param string|null $timeout Maximum execution time (in seconds as string)
      * @param int $retryAttempts Number of retry attempts on failure (0-10)
-     * @param string|null $compensationAction Action class for rollback scenarios
      * @param array<string> $conditions Array of condition expressions for conditional execution
      * @param array<string> $prerequisites Array of prerequisite step IDs that must complete first
      */
@@ -72,7 +70,6 @@ class Step
         private readonly array $config = [],
         private readonly ?string $timeout = null,
         private readonly int $retryAttempts = 0,
-        private readonly ?string $compensationAction = null,
         private readonly array $conditions = [],
         private readonly array $prerequisites = []
     ) {}
@@ -128,16 +125,6 @@ class Step
     }
 
     /**
-     * Get the compensation action class for rollback scenarios.
-     *
-     * @return string|null Compensation action class name, or null if none
-     */
-    public function getCompensationAction(): ?string
-    {
-        return $this->compensationAction;
-    }
-
-    /**
      * Get the conditional expressions for this step.
      *
      * @return array<string> Array of condition expressions that must all be true
@@ -165,16 +152,6 @@ class Step
     public function hasAction(): bool
     {
         return $this->actionClass !== null;
-    }
-
-    /**
-     * Check if this step has a compensation action for rollback.
-     *
-     * @return bool True if a compensation action is defined
-     */
-    public function hasCompensation(): bool
-    {
-        return $this->compensationAction !== null;
     }
 
     /**
@@ -244,7 +221,6 @@ class Step
             'config' => $this->config,
             'timeout' => $this->timeout,
             'retry_attempts' => $this->retryAttempts,
-            'compensation' => $this->compensationAction,
             'conditions' => $this->conditions,
             'prerequisites' => $this->prerequisites,
         ];

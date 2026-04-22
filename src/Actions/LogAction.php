@@ -39,7 +39,7 @@ class LogAction extends BaseAction
 
         return ActionResult::success([
             'logged_message' => $processedMessage,
-            'logged_at' => (new \DateTime)->format('c'),
+            'logged_at' => (new \DateTime('now', new \DateTimeZone('UTC')))->format('c'),
         ]);
     }
 

@@ -43,7 +43,7 @@ class DelayAction extends BaseAction
         return ActionResult::success([
             'delayed_seconds' => $seconds,
             'delayed_microseconds' => $microseconds,
-            'delayed_at' => (new \DateTime)->format('c'),
+            'delayed_at' => (new \DateTime('now', new \DateTimeZone('UTC')))->format('c'),
         ]);
     }
 }

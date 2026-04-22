@@ -303,7 +303,6 @@ final class WorkflowDefinition
                 config: $stepData['parameters'] ?? $stepData['config'] ?? [],
                 timeout: $stepData['timeout'] ?? null,
                 retryAttempts: $stepData['retry_attempts'] ?? 0,
-                compensationAction: $stepData['compensation'] ?? null,
                 conditions: $stepData['conditions'] ?? [],
                 prerequisites: $stepData['prerequisites'] ?? []
             );

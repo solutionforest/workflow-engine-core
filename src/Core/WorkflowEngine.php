@@ -124,8 +124,8 @@ class WorkflowEngine
             definition: $workflowDef,
             state: WorkflowState::PENDING,
             data: $context,
-            createdAt: new \DateTime,
-            updatedAt: new \DateTime
+            createdAt: new \DateTime('now', new \DateTimeZone('UTC')),
+            updatedAt: new \DateTime('now', new \DateTimeZone('UTC'))
         );
 
         // Save initial state
