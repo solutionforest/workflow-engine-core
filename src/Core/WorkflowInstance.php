@@ -136,8 +136,8 @@ final class WorkflowInstance
     ) {
         $this->state = $state;
         $this->data = $data;
-        $this->createdAt = $createdAt ?? new \DateTime;
-        $this->updatedAt = $updatedAt ?? new \DateTime;
+        $this->createdAt = $createdAt ?? new \DateTime('now', new \DateTimeZone('UTC'));
+        $this->updatedAt = $updatedAt ?? new \DateTime('now', new \DateTimeZone('UTC'));
     }
 
     /**
@@ -187,7 +187,7 @@ final class WorkflowInstance
         }
 
         $this->state = $state;
-        $this->updatedAt = new \DateTime;
+        $this->updatedAt = new \DateTime('now', new \DateTimeZone('UTC'));
     }
 
     /**
@@ -208,7 +208,7 @@ final class WorkflowInstance
     public function setData(array $data): void
     {
         $this->data = $data;
-        $this->updatedAt = new \DateTime;
+        $this->updatedAt = new \DateTime('now', new \DateTimeZone('UTC'));
     }
 
     /**
@@ -219,7 +219,7 @@ final class WorkflowInstance
     public function mergeData(array $data): void
     {
         $this->data = array_merge($this->data, $data);
-        $this->updatedAt = new \DateTime;
+        $this->updatedAt = new \DateTime('now', new \DateTimeZone('UTC'));
     }
 
     /**
@@ -240,7 +240,7 @@ final class WorkflowInstance
     public function setCurrentStepId(?string $stepId): void
     {
         $this->currentStepId = $stepId;
-        $this->updatedAt = new \DateTime;
+        $this->updatedAt = new \DateTime('now', new \DateTimeZone('UTC'));
     }
 
     /**
@@ -262,7 +262,7 @@ final class WorkflowInstance
     {
         if (! in_array($stepId, $this->completedSteps)) {
             $this->completedSteps[] = $stepId;
-            $this->updatedAt = new \DateTime;
+            $this->updatedAt = new \DateTime('now', new \DateTimeZone('UTC'));
         }
     }
 
@@ -287,9 +287,9 @@ final class WorkflowInstance
         $this->failedSteps[] = [
             'step_id' => $stepId,
             'error' => $error,
-            'failed_at' => (new \DateTime)->format('c'),
+            'failed_at' => (new \DateTime('now', new \DateTimeZone('UTC')))->format('c'),
         ];
-        $this->updatedAt = new \DateTime;
+        $this->updatedAt = new \DateTime('now', new \DateTimeZone('UTC'));
     }
 
     /**
@@ -310,7 +310,7 @@ final class WorkflowInstance
     public function setErrorMessage(?string $errorMessage): void
     {
         $this->errorMessage = $errorMessage;
-        $this->updatedAt = new \DateTime;
+        $this->updatedAt = new \DateTime('now', new \DateTimeZone('UTC'));
     }
 
     /**
