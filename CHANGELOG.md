@@ -5,6 +5,25 @@ All notable changes to `workflow-engine-core` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.0.4-alpha - 2026-05-04
+
+### What's Changed
+
+* Bump phpstan/phpstan from 2.1.39 to 2.1.40 by @dependabot[bot] in https://github.com/solutionforest/workflow-engine-core/pull/29
+* Bump laravel/pint from 1.27.1 to 1.29.0 by @dependabot[bot] in https://github.com/solutionforest/workflow-engine-core/pull/31
+* Bump phpstan/phpstan from 2.1.40 to 2.1.42 by @dependabot[bot] in https://github.com/solutionforest/workflow-engine-core/pull/32
+* Bump phpstan/phpstan from 2.1.42 to 2.1.44 by @dependabot[bot] in https://github.com/solutionforest/workflow-engine-core/pull/34
+* Bump dependabot/fetch-metadata from 2.5.0 to 3.0.0 by @dependabot[bot] in https://github.com/solutionforest/workflow-engine-core/pull/33
+* Bump ramsey/composer-install from 3 to 4 by @dependabot[bot] in https://github.com/solutionforest/workflow-engine-core/pull/30
+* Bump phpstan/phpstan from 2.1.44 to 2.1.46 by @dependabot[bot] in https://github.com/solutionforest/workflow-engine-core/pull/35
+* Refactor executor to iterative loop, add condition evaluation, improve validation by @lam0819 in https://github.com/solutionforest/workflow-engine-core/pull/36
+* Bump phpstan/phpstan from 2.1.46 to 2.1.50 by @dependabot[bot] in https://github.com/solutionforest/workflow-engine-core/pull/37
+* fix: UTC DateTime + remove dead compensation code by @lam0819 in https://github.com/solutionforest/workflow-engine-core/pull/38
+* Bump dependabot/fetch-metadata from 3.0.0 to 3.1.0 by @dependabot[bot] in https://github.com/solutionforest/workflow-engine-core/pull/39
+* Bump phpstan/phpstan from 2.1.50 to 2.1.54 by @dependabot[bot] in https://github.com/solutionforest/workflow-engine-core/pull/42
+
+**Full Changelog**: https://github.com/solutionforest/workflow-engine-core/compare/v0.0.3-alpha...v0.0.4-alpha
+
 ## v0.0.3-alpha - 2026-02-19
 
 ### What's Changed
