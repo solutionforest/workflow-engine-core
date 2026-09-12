@@ -6,7 +6,7 @@ use SolutionForest\WorkflowEngine\Core\WorkflowInstance;
 use SolutionForest\WorkflowEngine\Core\WorkflowState;
 use SolutionForest\WorkflowEngine\Exceptions\InvalidWorkflowDefinitionException;
 use SolutionForest\WorkflowEngine\Exceptions\WorkflowInstanceNotFoundException;
-use SolutionForest\WorkflowEngine\Tests\Support\InMemoryStorage;
+use SolutionForest\WorkflowEngine\Storage\InMemoryStorage;
 
 beforeEach(function () {
     $this->storage = new InMemoryStorage;

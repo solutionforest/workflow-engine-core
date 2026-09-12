@@ -193,6 +193,8 @@ class DefinitionParser
             foreach ($definition['transitions'] as $transitionIndex => $transition) {
                 $this->validateTransition($transition, $steps, $transitionIndex);
             }
+
+            $this->validateReachability($steps, $definition['transitions'], $definition);
         }
 
         // Validate optional version field
@@ -215,6 +217,92 @@ class DefinitionParser
     }
 
     /**
+     * Ensure every declared step is reachable from one of the workflow's roots.
+     *
+     * A step that no transition leads to, and that isn't itself an entry point,
+     * can never execute. Before this check the engine would run what it could
+     * reach and then report the whole workflow COMPLETED, silently dropping the
+     * orphaned branch — so an unreachable step is rejected at parse time.
+     *
+     * @param array<string, array<string, mixed>> $steps Normalized steps keyed by ID
+     * @param array<int, mixed> $transitions Raw transition list
+     * @param array<string, mixed> $definition The full definition, for error context
+     *
+     * @throws InvalidWorkflowDefinitionException If any step is unreachable
+     */
+    private function validateReachability(array $steps, array $transitions, array $definition): void
+    {
+        $stepIds = array_keys($steps);
+
+        // Build an adjacency list and collect every step that is a transition
+        // target, so the roots are whatever is left over.
+        $outgoing = [];
+        $hasIncoming = [];
+
+        foreach ($transitions as $transition) {
+            if (! is_array($transition) || ! isset($transition['from'], $transition['to'])) {
+                continue; // Already reported by validateTransition().
+            }
+
+            $from = (string) $transition['from'];
+            $to = (string) $transition['to'];
+
+            $outgoing[$from][] = $to;
+            $hasIncoming[$to] = true;
+        }
+
+        $roots = array_values(array_filter(
+            $stepIds,
+            static fn (string $id): bool => ! isset($hasIncoming[$id])
+        ));
+
+        // A fully cyclic graph has no root; execution falls back to the first
+        // declared step, so treat that as the entry point here too.
+        if ($roots === []) {
+            $roots = $stepIds === [] ? [] : [$stepIds[0]];
+        }
+
+        $reachable = [];
+        $queue = $roots;
+
+        while ($queue !== []) {
+            $current = array_shift($queue);
+
+            if (isset($reachable[$current])) {
+                continue;
+            }
+
+            $reachable[$current] = true;
+
+            foreach ($outgoing[$current] ?? [] as $next) {
+                if (! isset($reachable[$next])) {
+                    $queue[] = $next;
+                }
+            }
+        }
+
+        $unreachable = array_values(array_filter(
+            $stepIds,
+            static fn (string $id): bool => ! isset($reachable[$id])
+        ));
+
+        if ($unreachable !== []) {
+            throw new InvalidWorkflowDefinitionException(
+                sprintf(
+                    'Workflow contains unreachable step(s): %s. Every step must be reachable '.
+                    'from a starting step via transitions, otherwise it can never execute.',
+                    implode(', ', array_map(static fn (string $id): string => "'{$id}'", $unreachable))
+                ),
+                $definition,
+                array_map(
+                    static fn (string $id): string => "Step '{$id}' is not reachable from any starting step.",
+                    $unreachable
+                )
+            );
+        }
+    }
+
+    /**
      * Normalize step definitions to consistent associative array format.
      *
      * Converts various step input formats to a standardized associative array
@@ -231,13 +319,13 @@ class DefinitionParser
      * // Sequential array with ID properties (will be normalized)
      * $steps = [
      *     ['id' => 'step1', 'action' => 'LogAction', 'timeout' => '30s'],
-     *     ['id' => 'step2', 'action' => 'EmailAction']
+     *     ['id' => 'step2', 'action' => 'FakeEmailAction']
      * ];
      *
      * // Already associative (returned as-is)
      * $steps = [
      *     'step1' => ['action' => 'LogAction', 'timeout' => '30s'],
-     *     'step2' => ['action' => 'EmailAction']
+     *     'step2' => ['action' => 'FakeEmailAction']
      * ];
      * ```
      *
@@ -309,7 +397,7 @@ class DefinitionParser
      *
      * // Step with timeout and retry
      * $step = [
-     *     'action' => 'EmailAction',
+     *     'action' => 'FakeEmailAction',
      *     'timeout' => '30s',
      *     'retry_attempts' => 3,
      *     'parameters' => ['to' => 'user@example.com']

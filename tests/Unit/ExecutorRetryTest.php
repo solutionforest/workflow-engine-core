@@ -6,7 +6,7 @@ use SolutionForest\WorkflowEngine\Core\WorkflowBuilder;
 use SolutionForest\WorkflowEngine\Core\WorkflowContext;
 use SolutionForest\WorkflowEngine\Core\WorkflowEngine;
 use SolutionForest\WorkflowEngine\Exceptions\StepExecutionException;
-use SolutionForest\WorkflowEngine\Tests\Support\InMemoryStorage;
+use SolutionForest\WorkflowEngine\Storage\InMemoryStorage;
 use SolutionForest\WorkflowEngine\Tests\Support\SpyEventDispatcher;
 
 // A test action that fails N times then succeeds

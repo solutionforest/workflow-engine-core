@@ -46,6 +46,14 @@ class HttpAction extends BaseAction
             return ActionResult::failure('URL is required for HTTP action');
         }
 
+        // ext-curl is a suggested, not required, dependency: report its absence
+        // as a normal step failure rather than a fatal "undefined function".
+        if (! function_exists('curl_init')) {
+            return ActionResult::failure(
+                'HttpAction requires the cURL extension (ext-curl), which is not loaded.'
+            );
+        }
+
         // Process template variables in URL and data
         $url = $this->processTemplate($url, $context->getData());
         $data = $this->processArrayTemplates($data, $context->getData());

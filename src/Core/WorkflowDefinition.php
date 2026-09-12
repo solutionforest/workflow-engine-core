@@ -165,22 +165,47 @@ final class WorkflowDefinition
      */
     public function getFirstStep(): ?Step
     {
-        // Find step with no incoming transitions
+        $firstSteps = $this->getFirstSteps();
+
+        return $firstSteps[0] ?? null;
+    }
+
+    /**
+     * Find every entry point of the workflow.
+     *
+     * A workflow may legitimately begin with more than one root — several
+     * independent branches that later converge. Returning only one of them
+     * would silently drop the others while the workflow still reported success,
+     * so every step with no incoming transition is treated as a starting point.
+     *
+     * @return array<int, Step> All steps with no incoming transitions; falls
+     *                          back to the first declared step when the graph
+     *                          is entirely cyclic.
+     */
+    public function getFirstSteps(): array
+    {
         $stepsWithIncoming = [];
         foreach ($this->transitions as $transition) {
             $stepsWithIncoming[] = $transition['to'];
         }
 
+        $roots = [];
         foreach ($this->steps as $step) {
-            if (! in_array($step->getId(), $stepsWithIncoming)) {
-                return $step;
+            if (! in_array($step->getId(), $stepsWithIncoming, true)) {
+                $roots[] = $step;
             }
         }
 
-        // If no step found without incoming transitions, return first step
-        $stepsArray = $this->steps;
+        if ($roots !== []) {
+            return $roots;
+        }
 
-        return reset($stepsArray) ?: null;
+        // Every step has an incoming transition (a fully cyclic graph): fall
+        // back to the first declared step so execution can still begin.
+        $stepsArray = $this->steps;
+        $first = reset($stepsArray);
+
+        return $first === false ? [] : [$first];
     }
 
     /**
@@ -206,9 +231,7 @@ final class WorkflowDefinition
     public function getNextSteps(?string $currentStepId, array $data = []): array
     {
         if ($currentStepId === null) {
-            $firstStep = $this->getFirstStep();
-
-            return $firstStep ? [$firstStep] : [];
+            return $this->getFirstSteps();
         }
 
         $nextSteps = [];

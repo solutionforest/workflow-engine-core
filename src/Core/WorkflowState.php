@@ -260,7 +260,12 @@ enum WorkflowState: string
             // From PAUSED: can resume running, fail, or be cancelled
             self::PAUSED => in_array($state, [self::RUNNING, self::FAILED, self::CANCELLED]),
 
-            // Terminal states cannot transition to other states
+            // From FAILED: a failed workflow is recoverable. Resuming it puts the
+            // instance back into RUNNING so the failed step can be retried once the
+            // underlying cause is fixed; it may also be abandoned outright.
+            self::FAILED => in_array($state, [self::RUNNING, self::CANCELLED]),
+
+            // COMPLETED and CANCELLED are terminal.
             default => false,
         };
     }

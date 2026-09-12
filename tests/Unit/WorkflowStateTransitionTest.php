@@ -103,11 +103,11 @@ describe('WorkflowState Transitions', function () {
                 ->toThrow(InvalidWorkflowStateException::class);
         });
 
-        test('FAILED cannot transition to RUNNING', function () {
+        test('FAILED cannot transition to COMPLETED directly', function () {
             $instance = createInstance(WorkflowState::PENDING);
             $instance->setState(WorkflowState::FAILED);
 
-            expect(fn () => $instance->setState(WorkflowState::RUNNING))
+            expect(fn () => $instance->setState(WorkflowState::COMPLETED))
                 ->toThrow(InvalidWorkflowStateException::class);
         });
 

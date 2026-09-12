@@ -26,6 +26,32 @@ final class Arr
     }
 
     /**
+     * Determine whether a nested key exists, using dot notation.
+     *
+     * Distinguishes "the key is absent" from "the key holds null", which
+     * `get()` alone cannot express.
+     *
+     * @param array<string, mixed> $array
+     */
+    public static function has(array $array, string $key): bool
+    {
+        if (array_key_exists($key, $array)) {
+            return true;
+        }
+
+        $current = $array;
+
+        foreach (explode('.', $key) as $segment) {
+            if (! is_array($current) || ! array_key_exists($segment, $current)) {
+                return false;
+            }
+            $current = $current[$segment];
+        }
+
+        return true;
+    }
+
+    /**
      * Get the class "basename" of a class string (without namespace).
      */
     public static function classBasename(string $class): string

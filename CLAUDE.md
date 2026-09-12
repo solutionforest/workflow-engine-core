@@ -6,7 +6,7 @@ Project context for Claude Code and AI-assisted development.
 
 **workflow-engine-core** is a framework-agnostic PHP workflow engine. Zero production dependencies. PHP 8.3+. MIT licensed.
 
-Status: **v0.0.2-alpha** — active development, not production-ready.
+Status: **v2.0.0** — stable. Breaking changes follow semver and are documented in CHANGELOG.md.
 
 Related package: `solution-forest/workflow-engine-laravel` (Laravel integration layer).
 
@@ -50,23 +50,24 @@ WorkflowBuilder → WorkflowDefinition → WorkflowEngine → Executor → Actio
 | Namespace | Purpose |
 |-----------|---------|
 | `Core\` | WorkflowEngine, WorkflowBuilder, Executor, StateManager, WorkflowInstance, WorkflowDefinition, WorkflowContext, ActionResult, Step, DefinitionParser, ActionResolver |
-| `Actions\` | BaseAction, LogAction, EmailAction, HttpAction, DelayAction, ConditionAction |
+| `Actions\` | BaseAction, LogAction, FakeEmailAction, HttpAction, DelayAction, ConditionAction |
 | `Contracts\` | WorkflowAction, StorageAdapter, EventDispatcher, Logger |
 | `Attributes\` | WorkflowStep, Retry, Timeout, Condition |
 | `Events\` | WorkflowStartedEvent, WorkflowCompletedEvent, WorkflowFailedEvent, WorkflowCancelledEvent, StepCompletedEvent, StepFailedEvent, StepRetriedEvent |
 | `Exceptions\` | WorkflowException (base), InvalidWorkflowDefinitionException, InvalidWorkflowStateException, ActionNotFoundException, StepExecutionException, WorkflowInstanceNotFoundException |
 | `Support\` | NullLogger, NullEventDispatcher, SimpleWorkflow, Uuid, Timeout, ConditionEvaluator, Arr |
+| `Storage\` | InMemoryStorage (ships with the package; non-durable) |
 
 ### State Machine
 
 ```
-PENDING → RUNNING → COMPLETED
-    ↓         ↓ ↑
-  FAILED   WAITING
-    ↑         ↓ ↑
-  FAILED ← PAUSED
-    ↑
-CANCELLED ← (any non-terminal state)
+PENDING ──→ RUNNING ──→ COMPLETED   (terminal)
+              ↓ ↑
+          WAITING / PAUSED
+              ↓ ↑
+            FAILED ──→ RUNNING      (resume retries the failed step)
+              ↓
+          CANCELLED                 (terminal)
 ```
 
 **Valid transitions (enforced at runtime):**
@@ -74,7 +75,11 @@ CANCELLED ← (any non-terminal state)
 - `RUNNING` → `WAITING`, `PAUSED`, `COMPLETED`, `FAILED`, `CANCELLED`
 - `WAITING` → `RUNNING`, `FAILED`, `CANCELLED`
 - `PAUSED` → `RUNNING`, `FAILED`, `CANCELLED`
-- Terminal states (`COMPLETED`, `FAILED`, `CANCELLED`) → no transitions allowed
+- `FAILED` → `RUNNING` (recovery via `resume()`), `CANCELLED`
+- Terminal states (`COMPLETED`, `CANCELLED`) → no transitions allowed
+
+`FAILED` is recoverable: `resume()` returns the instance to `RUNNING` and retries
+the step that failed. A workflow blocked on unmet prerequisites parks in `WAITING`.
 
 Invalid transitions throw `InvalidWorkflowStateException`.
 
@@ -154,15 +159,15 @@ $engine->cancel($instanceId, 'reason');
 ## CI/CD
 
 GitHub Actions workflows:
-- `run-tests.yml` — Matrix: PHP 8.3/8.4 × prefer-lowest/prefer-stable
-- `phpstan.yml` — Static analysis on .php changes
+- `run-tests.yml` — Matrix: PHP 8.3/8.4 × prefer-lowest/prefer-stable (runs on push **and** pull_request)
+- `phpstan.yml` — Static analysis on .php changes (runs on push **and** pull_request)
 - `fix-php-code-style-issues.yml` — Auto-format with Pint on push
 - `update-changelog.yml` — Auto-update CHANGELOG on release
 - `dependabot-auto-merge.yml` — Auto-merge minor/patch dependency updates
 
 ## File Counts
 
-- 46 source files in `src/`
-- 25 test files in `tests/`
-- 93 tests, 224+ assertions
+- 47 source files in `src/`
+- 27 test files in `tests/`
+- 161 tests, 363+ assertions
 - PHPStan level 6 compliance

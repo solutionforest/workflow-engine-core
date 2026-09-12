@@ -252,7 +252,13 @@ class StateManager
     public function setError(WorkflowInstance $instance, string $error): void
     {
         $instance->setErrorMessage($error);
-        $instance->setState(WorkflowState::FAILED);
+
+        // Only move the state when the instance isn't already failed; a repeat
+        // failure would otherwise throw on the illegal FAILED -> FAILED hop.
+        if ($instance->getState() !== WorkflowState::FAILED) {
+            $instance->setState(WorkflowState::FAILED);
+        }
+
         $this->save($instance);
     }
 
