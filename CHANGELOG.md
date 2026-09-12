@@ -85,6 +85,9 @@ section before upgrading.
 
 ### CI
 
+- **PHP 8.5 added to the test matrix.** The library accepts `php: ^8.3`, which
+  admits 8.5, but it was never tested there. (Installing on 8.5 became possible
+  once #57 widened the dev tooling constraints.)
 - `run-tests.yml` and `phpstan.yml` now run on **pull requests**, not just pushes.
   Combined with `dependabot-auto-merge.yml` auto-merging minor and patch bumps,
   dependency updates could previously reach `main` without the suite ever running
