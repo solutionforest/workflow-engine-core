@@ -17,7 +17,12 @@
         }
     ],
     "require": {
-        "php": "^8.3"
+        "php": "^8.3",
+        "ext-json": "*"
+    },
+    "suggest": {
+        "ext-curl": "Required by HttpAction to make HTTP requests",
+        "ext-pcntl": "Enables step timeout enforcement (CLI/worker contexts only)"
     },
     "require-dev": {
         "laravel/pint": "^1.22",

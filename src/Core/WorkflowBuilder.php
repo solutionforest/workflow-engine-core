@@ -2,6 +2,7 @@
 
 namespace SolutionForest\WorkflowEngine\Core;
 
+use SolutionForest\WorkflowEngine\Actions\FakeEmailAction;
 use SolutionForest\WorkflowEngine\Contracts\WorkflowAction;
 use SolutionForest\WorkflowEngine\Exceptions\InvalidWorkflowDefinitionException;
 
@@ -37,7 +38,7 @@ use SolutionForest\WorkflowEngine\Exceptions\InvalidWorkflowDefinitionException;
  *
  * ```php
  * $workflow = WorkflowBuilder::create('newsletter')
- *     ->email('newsletter-template', '{{ user.email }}', 'Weekly Newsletter')
+ *     ->fakeEmail('newsletter-template', '{{ user.email }}', 'Weekly Newsletter')
  *     ->delay(hours: 1)
  *     ->http('https://api.example.com/track', 'POST', ['user_id' => '{{ user.id }}'])
  *     ->build();
@@ -310,7 +311,11 @@ final class WorkflowBuilder
     }
 
     /**
-     * Add an email step using pre-configured email action (common pattern).
+     * Add a placeholder email step that records, but does not send, an email.
+     *
+     * ⚠️ This adds a {@see FakeEmailAction},
+     * which **does not deliver mail** — this library ships no mail transport. Use
+     * it to prototype a flow, then swap in your own action backed by a real mailer.
      *
      * @param string $template Email template identifier
      * @param string $to Recipient email address (supports placeholders like "{{ user.email }}")
@@ -320,15 +325,18 @@ final class WorkflowBuilder
      *
      * @example
      * ```php
-     * $builder->email(
+     * $builder->fakeEmail(
      *     'welcome-email',
      *     '{{ user.email }}',
      *     'Welcome to {{ app.name }}!',
      *     ['user_name' => '{{ user.name }}']
      * );
+     *
+     * // Real delivery: use your own action instead.
+     * $builder->addStep('welcome', SendWelcomeEmailAction::class);
      * ```
      */
-    public function email(
+    public function fakeEmail(
         string $template,
         string $to,
         string $subject,
@@ -336,7 +344,7 @@ final class WorkflowBuilder
     ): self {
         return $this->addStep(
             $this->generateStepId('email'),
-            'SolutionForest\\WorkflowEngine\\Actions\\EmailAction',
+            FakeEmailAction::class,
             [
                 'template' => $template,
                 'to' => $to,
@@ -603,7 +611,7 @@ class QuickWorkflowBuilder
     {
         return WorkflowBuilder::create($name)
             ->description('Standard user onboarding process')
-            ->email(
+            ->fakeEmail(
                 template: 'welcome',
                 to: '{{ user.email }}',
                 subject: 'Welcome to {{ app.name }}!'
@@ -636,7 +644,7 @@ class QuickWorkflowBuilder
             ->addStep('validate_order', 'App\\Actions\\ValidateOrderAction')
             ->addStep('charge_payment', 'App\\Actions\\ChargePaymentAction')
             ->addStep('update_inventory', 'App\\Actions\\UpdateInventoryAction')
-            ->email(
+            ->fakeEmail(
                 template: 'order-confirmation',
                 to: '{{ order.customer.email }}',
                 subject: 'Order Confirmation #{{ order.id }}'
@@ -663,7 +671,7 @@ class QuickWorkflowBuilder
             ->description('Document approval process')
             ->addStep('submit_document', 'App\\Actions\\SubmitDocumentAction')
             ->addStep('assign_reviewer', 'App\\Actions\\AssignReviewerAction')
-            ->email(
+            ->fakeEmail(
                 template: 'review-request',
                 to: '{{ reviewer.email }}',
                 subject: 'Document Review Request'

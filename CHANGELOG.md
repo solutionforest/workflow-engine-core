@@ -5,6 +5,105 @@ All notable changes to `workflow-engine-core` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v2.0.0 - 2026-09-12
+
+Fixes several cases where the engine silently did the wrong thing and still
+reported success — the failure mode a workflow engine can least afford.
+
+**Why 2.0.0 and not 1.1.0:** `v1.0.0` was tagged as a stable release, so the
+corrections below — which change public class names and runtime behaviour — are
+breaking changes under semver and require a major bump. Every one is listed with
+its migration. If you are on `v0.0.4-alpha` or `v1.0.0`, read the *Changed*
+section before upgrading.
+
+### Fixed
+
+- **Compound conditions no longer evaluate to the wrong branch.** `ConditionEvaluator`
+  had no `&&`/`||` support, but instead of rejecting them it swallowed the operator
+  into the right-hand side and fell back to a string comparison — so
+  `order.total > 1000 && order.vip === true` returned **true** for a 500 dollar
+  order, with no exception and nothing in the logs. Boolean operators, parentheses
+  and negated groups are now supported, and a malformed expression throws
+  `InvalidWorkflowDefinitionException` instead of collapsing to a boolean.
+- **`resume()` works on a failed workflow.** Recovering a failed instance — the
+  documented recovery path — threw `Cannot transition workflow from 'failed' to
+  'failed'`. Three defects chained: the executor never lifted `FAILED` back to
+  `RUNNING`; the final `FAILED -> COMPLETED` hop was rejected; and the resulting
+  exception was raised *inside* the failure handler, destroying the original cause.
+  `FAILED -> RUNNING` is now a legal transition, resume retries the step that
+  failed, and the failure handler can no longer mask the real error.
+- **Multi-root workflows no longer drop a branch.** A definition with two
+  independent entry points executed only one of them and still reported
+  `COMPLETED` (with progress stuck below 100%). Every root now runs.
+- **Unreachable steps are rejected at parse time.** A group of steps reachable
+  only from each other could never execute, yet the workflow reported success.
+- **Relational comparisons against a missing key are `false`.** `null` coerces to
+  `0` in PHP, so `missing.key < 1000` was *true* and steps gated on data that was
+  never set would run.
+- **`start()` no longer overwrites an existing instance.** Reusing a workflow ID
+  silently discarded the earlier run's state and history; it now throws
+  `InvalidWorkflowStateException`.
+- **Blocked workflows park in `WAITING`.** A workflow whose steps were all blocked
+  on unmet prerequisites stayed in `RUNNING` forever, indistinguishable from one
+  still executing.
+- **`DelayAction` honours `minutes` and `hours`.** Both were documented but never
+  read, so `delay(hours: 2)` silently paused for the one second default.
+- **`HttpAction` reports a missing cURL extension** as a step failure instead of a
+  fatal "undefined function" error.
+
+### Changed
+
+- **BREAKING: `EmailAction` is now `FakeEmailAction`.** It never sent email, but
+  returned `'status' => 'sent'` — a workflow could show a delivered confirmation
+  that did not exist. The payload is now explicitly `'sent' => false, 'mock' => true`,
+  and it logs a warning. *Migration: implement `WorkflowAction` with your own mail
+  transport for real delivery.*
+- **BREAKING: `WorkflowBuilder::email()` is now `fakeEmail()`**, for the same
+  reason. *Migration: rename the call, or switch to your own action.*
+- **BREAKING: `ConditionAction` no longer accepts `on_true` / `on_false`.** They
+  were read but never consumed by the engine, so the documented branching did not
+  exist. *Migration: branch with a `condition` on the transition instead.*
+- **BREAKING: `ConditionAction` uses the shared condition grammar.** It previously
+  carried its own parser accepting `=`, `is` and `is not`, which no other part of
+  the engine understood. *Migration: use `===`, `==`, `!=` etc.*
+- **BREAKING: `FAILED` is no longer a terminal state** — it can transition to
+  `RUNNING` (resume) or `CANCELLED`. Code asserting that failed workflows are
+  immutable needs updating.
+- `WorkflowState::isFinished()` still reports `true` for `FAILED`; use
+  `canTransitionTo()` to test whether an instance can still move.
+
+### Added
+
+- `Storage\InMemoryStorage` now **ships with the package**. Previously the only
+  implementation lived in `tests/` under `autoload-dev`, so the library could not
+  run a workflow out of the box without first writing an adapter.
+- `WorkflowDefinition::getFirstSteps()` returns every entry point.
+- `Support\Arr::has()` distinguishes an absent key from one holding `null`.
+- Boolean operators (`&&`, `||`), parentheses and negated groups in conditions.
+- `SECURITY.md` with a disclosure process and scope notes.
+- Regression tests for every issue above (116 -> 161 tests).
+
+### CI
+
+- `run-tests.yml` and `phpstan.yml` now run on **pull requests**, not just pushes.
+  Combined with `dependabot-auto-merge.yml` auto-merging minor and patch bumps,
+  dependency updates could previously reach `main` without the suite ever running
+  against the merge result.
+- Removed a stale PHPStan `ignoreErrors` pattern that no longer matched anything.
+
+### Docs
+
+- Documented the condition grammar, including the two rules that stop a mistyped
+  condition from silently routing a workflow the wrong way.
+- Corrected the built-in actions table: it documented a `body` key for
+  `EmailAction` and `HttpAction` that neither read, `minutes`/`hours` for
+  `DelayAction` that were ignored, and branching for `ConditionAction` that did
+  not exist.
+- Fixed the PHP attribute examples, whose inline comments claimed retries and
+  timeouts that the attributes do not actually perform — the engine still does not
+  read them (this is noted in the README).
+- Archived the completed `PLAN.md` to `docs/PLAN-2025-refactor.md`.
+
 ## v1.0.0 - 2026-09-12
 
 First stable release.

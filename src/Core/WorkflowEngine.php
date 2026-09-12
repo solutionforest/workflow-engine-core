@@ -115,6 +115,13 @@ class WorkflowEngine
      */
     public function start(string $workflowId, array $definition, array $context = []): string
     {
+        // Refuse to clobber an existing instance. IDs are caller-supplied, so a
+        // collision is a realistic mistake, and silently overwriting would
+        // discard the earlier run's state and history with no way to notice.
+        if ($this->storage->exists($workflowId)) {
+            throw InvalidWorkflowStateException::alreadyExists($workflowId);
+        }
+
         // Parse definition
         $workflowDef = $this->parser->parse($definition);
 
@@ -172,6 +179,15 @@ class WorkflowEngine
 
         if ($instance->getState() === WorkflowState::COMPLETED) {
             throw InvalidWorkflowStateException::cannotResumeCompleted($instanceId);
+        }
+
+        if ($instance->getState() === WorkflowState::CANCELLED) {
+            throw new InvalidWorkflowStateException(
+                "Cannot resume workflow '{$instanceId}' because it was cancelled",
+                WorkflowState::CANCELLED,
+                WorkflowState::RUNNING,
+                $instanceId
+            );
         }
 
         $this->executor->execute($instance);
@@ -251,7 +267,9 @@ class WorkflowEngine
     {
         $instance = $this->stateManager->load($instanceId);
 
-        if ($instance->getState()->isFinished()) {
+        // A failed workflow can still be abandoned, so ask the state machine
+        // rather than assuming every "finished" state is uncancellable.
+        if (! $instance->getState()->canTransitionTo(WorkflowState::CANCELLED)) {
             throw new InvalidWorkflowStateException(
                 "Cannot cancel workflow '{$instanceId}' because it is in '{$instance->getState()->value}' state",
                 $instance->getState(),

@@ -91,8 +91,10 @@ $definition = WorkflowBuilder::create('order-processing')
     ->addStep('fulfillment', FulfillOrderAction::class)
     ->build();
 
-// Create engine with storage adapter and event dispatcher
-$engine = new WorkflowEngine($storageAdapter, $eventDispatcher);
+// Create engine with a storage adapter (InMemoryStorage ships with the package)
+use SolutionForest\WorkflowEngine\Storage\InMemoryStorage;
+
+$engine = new WorkflowEngine(new InMemoryStorage(), $eventDispatcher);
 
 // Start and run the workflow
 $instanceId = $engine->start(
@@ -118,7 +120,9 @@ $workflow = WorkflowBuilder::create('order-flow')
         $builder->addStep('fraud_check', FraudCheckAction::class);
     })
     ->addStep('payment', ProcessPaymentAction::class, timeout: 300, retryAttempts: 3)
-    ->email('order-confirmation', 'customer@example.com', 'Order Confirmed')
+    // fakeEmail() records an email but does NOT send one - this package ships
+    // no mail transport. Use your own action for real delivery.
+    ->fakeEmail('order-confirmation', 'customer@example.com', 'Order Confirmed')
     ->build();
 
 // Quick templates for common patterns
@@ -142,7 +146,8 @@ class ReliableApiAction extends BaseAction
 {
     public function execute(WorkflowContext $context): ActionResult
     {
-        // Retries up to 3 times with exponential backoff starting at 1s
+        // Metadata only - the engine does not read this attribute yet.
+        // For real retries use: ->addStep('id', Action::class, retryAttempts: 3)
         return ActionResult::success();
     }
 }
@@ -157,7 +162,8 @@ class TimedAction extends BaseAction
 {
     public function execute(WorkflowContext $context): ActionResult
     {
-        // Will timeout after 30 seconds
+        // Metadata only - the engine does not read this attribute yet.
+        // For a real timeout use: ->addStep('id', Action::class, timeout: 30)
         return ActionResult::success();
     }
 }
@@ -172,7 +178,8 @@ class PremiumProcessingAction extends BaseAction
 {
     public function execute(WorkflowContext $context): ActionResult
     {
-        // Only executes when order.amount > 100
+        // Metadata only - the engine does not read this attribute yet.
+        // For real gating use: ->when('order.amount > 100', fn ($b) => ...)
         return ActionResult::success();
     }
 }
@@ -213,6 +220,41 @@ $workflow = WorkflowBuilder::create('conditional-flow')
     ->build();
 ```
 
+### Condition Syntax
+
+Conditions are parsed, never `eval()`'d. The same grammar is used by step
+conditions, transition conditions, `when()` and `ConditionAction`.
+
+```php
+// Comparisons: === !== == != > < >= <=
+'order.total > 1000'
+'user.plan === "premium"'
+'status != cancelled'        // bare words are treated as strings
+
+// Truthy checks and negation
+'user.active'
+'!user.suspended'
+
+// Boolean operators, with && binding tighter than ||
+'order.total > 1000 && user.vip === true'
+'user.vip || order.total > 5000'
+
+// Parentheses to override precedence
+'(user.vip || order.total > 5000) && !order.refunded'
+```
+
+Dot notation reads nested data (`order.customer.email`). Values may be numbers,
+quoted strings, bare words, `true`, `false` or `null`.
+
+Two rules keep a mistyped condition from quietly routing a workflow the wrong way:
+
+- **A malformed expression throws** `InvalidWorkflowDefinitionException` rather
+  than collapsing to a boolean. Chained comparisons (`a > 1 > 2`), dangling
+  operators and unbalanced parentheses are all rejected.
+- **A relational comparison against a missing key is `false`.** Because `null`
+  coerces to `0` in PHP, `missing.key < 1000` would otherwise be *true* and a
+  step gated on data that was never set would run.
+
 ### Workflow Lifecycle Management
 
 ```php
@@ -221,6 +263,18 @@ $instanceId = $engine->start('my-workflow', $definition->toArray(), ['key' => 'v
 $instance = $engine->getInstance($instanceId);
 $engine->resume($instanceId);
 $engine->cancel($instanceId, 'No longer needed');
+
+// Instance IDs are caller-supplied and must be unique: start() throws
+// InvalidWorkflowStateException rather than overwriting an existing instance.
+
+// Recovering a failed workflow: fix the cause, then resume to retry the
+// step that failed. resume() is rejected for COMPLETED and CANCELLED.
+try {
+    $engine->resume($instanceId);
+} catch (StepExecutionException $e) {
+    // Still failing - the exception carries the real cause, not a
+    // state-machine error from the failure handler.
+}
 
 // Track progress
 $progress = $instance->getProgress(); // 0.0 to 100.0
@@ -295,13 +349,13 @@ WorkflowBuilder → WorkflowDefinition → WorkflowEngine → Executor → Actio
 ### State Machine
 
 ```
-PENDING → RUNNING → COMPLETED
-    ↓         ↓ ↑
-  FAILED   WAITING
-    ↑         ↓ ↑
-  FAILED ← PAUSED
-    ↑
-CANCELLED ← (any non-terminal state)
+PENDING ──→ RUNNING ──→ COMPLETED   (terminal)
+              ↓ ↑
+          WAITING / PAUSED
+              ↓ ↑
+            FAILED ──→ RUNNING      (resume retries the failed step)
+              ↓
+          CANCELLED                 (terminal)
 ```
 
 **Valid transitions:**
@@ -309,7 +363,16 @@ CANCELLED ← (any non-terminal state)
 - `RUNNING` → `WAITING`, `PAUSED`, `COMPLETED`, `FAILED`, `CANCELLED`
 - `WAITING` → `RUNNING`, `FAILED`, `CANCELLED`
 - `PAUSED` → `RUNNING`, `FAILED`, `CANCELLED`
-- Terminal states (`COMPLETED`, `FAILED`, `CANCELLED`) → no further transitions
+- `FAILED` → `RUNNING` (via `resume()`), `CANCELLED`
+- Terminal states (`COMPLETED`, `CANCELLED`) → no further transitions
+
+`FAILED` is **recoverable, not terminal**: calling `resume()` puts the instance
+back into `RUNNING` and retries the step that failed, which is how you recover a
+workflow once the underlying cause is fixed.
+
+A workflow whose next steps are all blocked on unmet prerequisites parks in
+`WAITING` rather than sitting in `RUNNING`, so a stuck instance is
+distinguishable from one still executing.
 
 State transitions are validated at runtime — invalid transitions throw `InvalidWorkflowStateException`.
 
@@ -318,7 +381,7 @@ State transitions are validated at runtime — invalid transitions throw `Invali
 | Namespace | Contents |
 |-----------|----------|
 | `Core\` | WorkflowEngine, WorkflowBuilder, Executor, StateManager, WorkflowInstance, WorkflowDefinition, WorkflowContext, ActionResult, Step, DefinitionParser, ActionResolver |
-| `Actions\` | BaseAction, LogAction, EmailAction, HttpAction, DelayAction, ConditionAction |
+| `Actions\` | BaseAction, LogAction, FakeEmailAction, HttpAction, DelayAction, ConditionAction |
 | `Contracts\` | WorkflowAction, StorageAdapter, EventDispatcher, Logger |
 | `Attributes\` | WorkflowStep, Retry, Timeout, Condition |
 | `Events\` | WorkflowStartedEvent, WorkflowCompletedEvent, WorkflowFailedEvent, WorkflowCancelledEvent, StepCompletedEvent, StepFailedEvent, StepRetriedEvent |
@@ -332,10 +395,10 @@ Six ready-to-use actions are included:
 | Action | Purpose | Config Keys |
 |--------|---------|-------------|
 | **LogAction** | Log messages with placeholder replacement (`{user.name}`) | `message`, `level` (debug/info/warning/error) |
-| **EmailAction** | Mock email sending with template support | `to`, `subject`, `body`, `template` |
-| **HttpAction** | HTTP requests with `{{ variable }}` template variables | `url`, `method`, `headers`, `body` |
-| **DelayAction** | Pause execution for a specified duration | `seconds`, `minutes`, `hours` |
-| **ConditionAction** | Evaluate boolean expressions and branch (`on_true`/`on_false`) | `condition`, `on_true`, `on_false` |
+| **FakeEmailAction** | ⚠️ Records an email; **does not send one** (no mail transport ships with this package) | `to`, `subject`, `template`, `data` |
+| **HttpAction** | HTTP requests with `{{ variable }}` template variables (requires `ext-curl`) | `url`, `method`, `data`, `headers`, `timeout`, `connect_timeout`, `verify_tls`, `max_redirects` |
+| **DelayAction** | Pause execution for a specified duration (blocking) | `hours`, `minutes`, `seconds`, `microseconds` |
+| **ConditionAction** | Evaluate a condition and record the result in workflow data | `condition` |
 | **BaseAction** | Abstract base class for custom actions | — |
 
 ### WorkflowState Helpers

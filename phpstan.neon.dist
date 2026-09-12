@@ -5,6 +5,5 @@ parameters:
     tmpDir: build/phpstan
     ignoreErrors:
         - '#has no value type specified in iterable type array#'
-        - '#Match arm comparison between .+ and .+ is always true#'
         - '#PHPDoc tag @param for parameter .+ with type .+ is not subtype of native type#'
         - '#Parameter .+ has invalid type#'

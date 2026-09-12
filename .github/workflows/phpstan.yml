@@ -7,6 +7,12 @@ on:
       - 'phpstan.neon.dist'
       - '.github/workflows/phpstan.yml'
 
+  pull_request:
+    paths:
+      - '**.php'
+      - 'phpstan.neon.dist'
+      - '.github/workflows/phpstan.yml'
+
 jobs:
   phpstan:
     name: phpstan

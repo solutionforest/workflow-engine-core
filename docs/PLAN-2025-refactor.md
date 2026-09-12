@@ -1,3 +1,7 @@
+> **Archived.** Phases 1–8 of this plan were completed and shipped; it is kept
+> for historical context only and is not a current roadmap. See `CHANGELOG.md`
+> for what actually landed.
+
 # Implementation Plan: workflow-engine-core Improvements
 
 ## Philosophy

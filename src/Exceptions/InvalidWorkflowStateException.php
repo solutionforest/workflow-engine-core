@@ -176,6 +176,22 @@ final class InvalidWorkflowStateException extends WorkflowException
     }
 
     /**
+     * Create an exception for starting a workflow whose ID is already taken.
+     *
+     * @param string $instanceId The workflow instance ID
+     */
+    public static function alreadyExists(string $instanceId): static
+    {
+        return new self(
+            "Cannot start workflow '{$instanceId}' because an instance with that ID already exists. ".
+            'Use a unique instance ID, or delete the existing instance first.',
+            WorkflowState::PENDING,
+            WorkflowState::PENDING,
+            $instanceId
+        );
+    }
+
+    /**
      * Create an exception for attempting to start an already running workflow.
      *
      * @param string $instanceId The workflow instance ID

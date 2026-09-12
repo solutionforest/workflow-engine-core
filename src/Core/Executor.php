@@ -130,7 +130,22 @@ class Executor
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            $this->stateManager->setError($instance, $e->getMessage());
+            // Recording the failure must never replace the failure itself. If
+            // the instance is in a state that cannot legally move to FAILED
+            // (or storage rejects the write), swallow that secondary error and
+            // log it — the caller needs the original cause, not the bookkeeping
+            // exception that happened while reacting to it.
+            try {
+                $this->stateManager->setError($instance, $e->getMessage());
+            } catch (\Throwable $bookkeepingError) {
+                $this->logger->error('Failed to record workflow failure state', [
+                    'workflow_id' => $instance->getId(),
+                    'state' => $instance->getState()->value,
+                    'original_error' => $e->getMessage(),
+                    'bookkeeping_error' => $bookkeepingError->getMessage(),
+                ]);
+            }
+
             $this->eventDispatcher->dispatch(new WorkflowFailedEvent($instance, $e));
 
             // Re-throw the original throwable to maintain the error context
@@ -153,9 +168,20 @@ class Executor
      */
     private function processWorkflow(WorkflowInstance $instance): void
     {
-        // If workflow is not running, transition it to running
-        if (in_array($instance->getState(), [WorkflowState::PENDING, WorkflowState::PAUSED, WorkflowState::WAITING])) {
+        // If workflow is not running, transition it to running. FAILED is
+        // included so that resuming a failed workflow actually retries it
+        // instead of executing steps while still marked failed (which would
+        // then trip the state machine on the final FAILED -> COMPLETED hop).
+        if (in_array($instance->getState(), [
+            WorkflowState::PENDING,
+            WorkflowState::PAUSED,
+            WorkflowState::WAITING,
+            WorkflowState::FAILED,
+        ])) {
             $instance->setState(WorkflowState::RUNNING);
+            // Clear the previous failure so a recovered run doesn't keep
+            // reporting a stale error message.
+            $instance->setErrorMessage(null);
             $this->stateManager->save($instance);
         }
 
@@ -207,10 +233,23 @@ class Executor
                 $progressed = true;
             }
 
-            // If no steps made progress this iteration, the workflow is stuck
-            // (e.g. all next steps were blocked on unmet prerequisites). Exit
-            // the loop and let the next resume() reattempt.
+            // No step made progress: every candidate was blocked on an unmet
+            // prerequisite. Park the workflow in WAITING rather than leaving it
+            // in RUNNING, where a permanently stuck instance is indistinguishable
+            // from one that is still executing.
             if (! $progressed) {
+                $blocked = array_map(static fn (Step $s): string => $s->getId(), $nextSteps);
+
+                $this->logger->warning('Workflow is waiting on unmet prerequisites', [
+                    'workflow_id' => $instance->getId(),
+                    'blocked_steps' => $blocked,
+                ]);
+
+                if ($instance->getState()->canTransitionTo(WorkflowState::WAITING)) {
+                    $instance->setState(WorkflowState::WAITING);
+                    $this->stateManager->save($instance);
+                }
+
                 return;
             }
         }

@@ -23,8 +23,8 @@ describe('WorkflowBuilder auto-generated step IDs', function () {
 
     test('email/delay/http/condition sugar methods use monotonic counters', function () {
         $definition = WorkflowBuilder::create('sugar-ids')
-            ->email('welcome', 'user@example.com', 'Hi')
-            ->email('followup', 'user@example.com', 'Hi again')
+            ->fakeEmail('welcome', 'user@example.com', 'Hi')
+            ->fakeEmail('followup', 'user@example.com', 'Hi again')
             ->delay(seconds: 30)
             ->delay(seconds: 60)
             ->build();

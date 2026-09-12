@@ -5,10 +5,26 @@ namespace SolutionForest\WorkflowEngine\Actions;
 use SolutionForest\WorkflowEngine\Attributes\WorkflowStep;
 use SolutionForest\WorkflowEngine\Core\ActionResult;
 use SolutionForest\WorkflowEngine\Core\WorkflowContext;
-use SolutionForest\WorkflowEngine\Support\Arr;
+use SolutionForest\WorkflowEngine\Support\ConditionEvaluator;
 
 /**
- * Condition evaluation action with advanced expression parsing
+ * Records the result of a condition expression in the workflow data.
+ *
+ * This action **evaluates** a condition; it does not branch. Branching is a
+ * property of the graph, not of a step, so route the workflow with a condition
+ * on the transition (or on the target step) instead:
+ *
+ * ```php
+ * 'transitions' => [
+ *     ['from' => 'check', 'to' => 'premium', 'condition' => 'order.total > 1000'],
+ *     ['from' => 'check', 'to' => 'standard', 'condition' => 'order.total <= 1000'],
+ * ]
+ * ```
+ *
+ * The result is merged into the workflow data as `result`, so later steps and
+ * transitions can read it.
+ *
+ * Conditions use the grammar documented on {@see ConditionEvaluator}.
  */
 #[WorkflowStep(
     id: 'condition_check',
@@ -30,8 +46,6 @@ class ConditionAction extends BaseAction
     protected function doExecute(WorkflowContext $context): ActionResult
     {
         $condition = $this->getConfig('condition');
-        $onTrue = $this->getConfig('on_true', null);
-        $onFalse = $this->getConfig('on_false', null);
 
         if (! $condition) {
             return ActionResult::failure('Condition is required');
@@ -43,10 +57,9 @@ class ConditionAction extends BaseAction
             return ActionResult::success([
                 'condition' => $condition,
                 'result' => $result,
-                'next_action' => $result ? $onTrue : $onFalse,
             ]);
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return ActionResult::failure(
                 "Condition evaluation failed: {$e->getMessage()}",
                 ['condition' => $condition]
@@ -59,64 +72,18 @@ class ConditionAction extends BaseAction
      *
      * @param array<string, mixed> $data
      */
-    private function evaluateCondition(string $condition, array $data): bool
-    {
-        // Simple expression parser for common patterns
-        if (preg_match('/^(.+?)\s*(=|!=|>|<|>=|<=|is|is not)\s*(.+)$/', $condition, $matches)) {
-            $left = trim($matches[1]);
-            $operator = trim($matches[2]);
-            $right = trim($matches[3]);
-
-            $leftValue = $this->getValue($left, $data);
-            $rightValue = $this->getValue($right, $data);
-
-            return match ($operator) {
-                '=' => $leftValue == $rightValue,
-                '!=' => $leftValue != $rightValue,
-                '>' => $leftValue > $rightValue,
-                '<' => $leftValue < $rightValue,
-                '>=' => $leftValue >= $rightValue,
-                '<=' => $leftValue <= $rightValue,
-                'is' => $leftValue === $rightValue,
-                'is not' => $leftValue !== $rightValue,
-                default => throw new \InvalidArgumentException("Unsupported operator: {$operator}")
-            };
-        }
-
-        // Check for boolean values
-        if (in_array(strtolower($condition), ['true', '1', 'yes'])) {
-            return true;
-        }
-
-        if (in_array(strtolower($condition), ['false', '0', 'no'])) {
-            return false;
-        }
-
-        // Direct data access
-        return (bool) $this->getValue($condition, $data);
-    }
-
     /**
+     * Evaluate a condition expression against workflow data.
+     *
+     * Delegates to {@see ConditionEvaluator} so that every condition in the
+     * library — step conditions, transition conditions and this action — speaks
+     * exactly one grammar. This class previously carried its own parser that
+     * accepted "=" and "is", which no other part of the engine understood.
+     *
      * @param array<string, mixed> $data
      */
-    private function getValue(string $expression, array $data): mixed
+    private function evaluateCondition(string $condition, array $data): bool
     {
-        // Remove quotes for string literals
-        if (preg_match('/^["\'](.+)["\']$/', $expression, $matches)) {
-            return $matches[1];
-        }
-
-        // Check for numeric values
-        if (is_numeric($expression)) {
-            return str_contains($expression, '.') ? (float) $expression : (int) $expression;
-        }
-
-        // Check for boolean literals
-        return match (strtolower($expression)) {
-            'true', 'yes' => true,
-            'false', 'no' => false,
-            'null', 'empty' => null,
-            default => Arr::get($data, $expression)
-        };
+        return ConditionEvaluator::evaluate($condition, $data);
     }
 }

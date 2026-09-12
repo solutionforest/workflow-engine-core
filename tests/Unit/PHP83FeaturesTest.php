@@ -23,7 +23,7 @@ describe('PHP 8.3+ Features', function () {
             ->version('2.0')
             ->startWith(LogAction::class, ['message' => 'Starting workflow'])
             ->then(DelayAction::class, ['seconds' => 1])
-            ->email(
+            ->fakeEmail(
                 template: 'test',
                 to: '{{ user.email }}',
                 subject: 'Test Email'
@@ -63,10 +63,12 @@ describe('PHP 8.3+ Features', function () {
         expect(WorkflowState::PENDING->canTransitionTo(WorkflowState::RUNNING))->toBeTrue();
         expect(WorkflowState::RUNNING->canTransitionTo(WorkflowState::COMPLETED))->toBeTrue();
         expect(WorkflowState::RUNNING->canTransitionTo(WorkflowState::FAILED))->toBeTrue();
+        // FAILED is recoverable: resuming a failed workflow retries it.
+        expect(WorkflowState::FAILED->canTransitionTo(WorkflowState::RUNNING))->toBeTrue();
 
         // Test invalid transitions
         expect(WorkflowState::COMPLETED->canTransitionTo(WorkflowState::RUNNING))->toBeFalse();
-        expect(WorkflowState::FAILED->canTransitionTo(WorkflowState::RUNNING))->toBeFalse();
+        expect(WorkflowState::FAILED->canTransitionTo(WorkflowState::COMPLETED))->toBeFalse();
         expect(WorkflowState::CANCELLED->canTransitionTo(WorkflowState::RUNNING))->toBeFalse();
     });
 
@@ -91,7 +93,7 @@ describe('Simplified Learning Curve', function () {
 
     it('can create workflow with common patterns using helper methods', function () {
         $workflow = WorkflowBuilder::create('helper-test')
-            ->email(
+            ->fakeEmail(
                 template: 'welcome',
                 to: 'user@example.com',
                 subject: 'Welcome!'
@@ -109,7 +111,7 @@ describe('Simplified Learning Curve', function () {
         expect($steps)->toHaveCount(4);
 
         // Check email step
-        expect($steps[0]->getActionClass())->toBe('SolutionForest\\WorkflowEngine\\Actions\\EmailAction');
+        expect($steps[0]->getActionClass())->toBe('SolutionForest\\WorkflowEngine\\Actions\\FakeEmailAction');
         expect($steps[0]->getConfig()['template'])->toBe('welcome');
 
         // Check delay step
@@ -140,7 +142,7 @@ describe('Simplified Learning Curve', function () {
         $workflow = WorkflowBuilder::create(name: 'named-args-test')
             ->description(description: 'Testing named arguments')
             ->version(version: '1.0')
-            ->email(
+            ->fakeEmail(
                 template: 'test',
                 to: 'test@example.com',
                 subject: 'Test Subject',

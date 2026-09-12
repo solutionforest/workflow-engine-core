@@ -4,7 +4,7 @@ namespace SolutionForest\WorkflowEngine\Tests;
 
 use PHPUnit\Framework\TestCase as PHPUnitTestCase;
 use SolutionForest\WorkflowEngine\Core\WorkflowEngine;
-use SolutionForest\WorkflowEngine\Tests\Support\InMemoryStorage;
+use SolutionForest\WorkflowEngine\Storage\InMemoryStorage;
 
 class TestCase extends PHPUnitTestCase
 {

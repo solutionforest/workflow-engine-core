@@ -351,6 +351,18 @@ final class WorkflowInstance
      */
     public function getNextSteps(): array
     {
+        // If the current step never completed — it failed, or execution was
+        // interrupted — it is still the next thing to do. Following the
+        // outgoing transitions here would silently skip past the step that
+        // needs retrying, which is exactly what resuming is meant to fix.
+        if ($this->currentStepId !== null && ! $this->isStepCompleted($this->currentStepId)) {
+            $currentStep = $this->definition->getStep($this->currentStepId);
+
+            if ($currentStep !== null) {
+                return [$currentStep];
+            }
+        }
+
         return $this->definition->getNextSteps($this->currentStepId, $this->data);
     }
 

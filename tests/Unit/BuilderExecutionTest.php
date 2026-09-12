@@ -6,7 +6,7 @@ use SolutionForest\WorkflowEngine\Core\WorkflowBuilder;
 use SolutionForest\WorkflowEngine\Core\WorkflowContext;
 use SolutionForest\WorkflowEngine\Core\WorkflowEngine;
 use SolutionForest\WorkflowEngine\Core\WorkflowState;
-use SolutionForest\WorkflowEngine\Tests\Support\InMemoryStorage;
+use SolutionForest\WorkflowEngine\Storage\InMemoryStorage;
 
 /**
  * Test action that records every execution so tests can assert the exact
