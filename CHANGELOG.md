@@ -5,6 +5,14 @@ All notable changes to `workflow-engine-core` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v1.0.0 - 2026-09-12
+
+First stable release.
+
+Promotes the package out of alpha so dependents can require a stable constraint instead of `dev-main`. No behavioural change from `v0.0.4-alpha`.
+
+The only work since that tag was allowing current test tooling (#57): the dev requirements pinned Pest 2 / PHPUnit 10, which cannot install on PHP 8.4+, so the suite could not be run at all on a current PHP. 116 tests, PHPStan and Pint green.
+
 ## v0.0.4-alpha - 2026-05-04
 
 ### What's Changed
