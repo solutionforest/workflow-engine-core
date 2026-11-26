@@ -6,7 +6,7 @@ Project context for Claude Code and AI-assisted development.
 
 **workflow-engine-core** is a framework-agnostic PHP workflow engine. Zero production dependencies. PHP 8.3+. MIT licensed.
 
-Status: **v2.0.0** — stable. Breaking changes follow semver and are documented in CHANGELOG.md.
+Status: **v3.0.0** — stable. Breaking changes follow semver and are documented in CHANGELOG.md.
 
 Related package: `solution-forest/workflow-engine-laravel` (Laravel integration layer).
 
@@ -19,7 +19,7 @@ composer test
 # Run tests with coverage
 composer test:coverage
 
-# Static analysis (PHPStan level 6)
+# Static analysis (PHPStan level 9)
 composer analyze
 
 # Code formatting (Laravel Pint)
@@ -49,12 +49,12 @@ WorkflowBuilder → WorkflowDefinition → WorkflowEngine → Executor → Actio
 
 | Namespace | Purpose |
 |-----------|---------|
-| `Core\` | WorkflowEngine, WorkflowBuilder, Executor, StateManager, WorkflowInstance, WorkflowDefinition, WorkflowContext, ActionResult, Step, DefinitionParser, ActionResolver |
+| `Core\` | WorkflowEngine, WorkflowBuilder, Executor, StateManager, WorkflowInstance, WorkflowDefinition, WorkflowContext, ActionResult, Suspension, Wait, Step, DefinitionParser, ActionResolver |
 | `Actions\` | BaseAction, LogAction, FakeEmailAction, HttpAction, DelayAction, ConditionAction |
 | `Contracts\` | WorkflowAction, StorageAdapter, EventDispatcher, Logger |
 | `Attributes\` | WorkflowStep, Retry, Timeout, Condition |
-| `Events\` | WorkflowStartedEvent, WorkflowCompletedEvent, WorkflowFailedEvent, WorkflowCancelledEvent, StepCompletedEvent, StepFailedEvent, StepRetriedEvent |
-| `Exceptions\` | WorkflowException (base), InvalidWorkflowDefinitionException, InvalidWorkflowStateException, ActionNotFoundException, StepExecutionException, WorkflowInstanceNotFoundException |
+| `Events\` | WorkflowStartedEvent, WorkflowCompletedEvent, WorkflowFailedEvent, WorkflowCancelledEvent, WorkflowSuspendedEvent, WorkflowResumedEvent, StepCompletedEvent, StepFailedEvent, StepRetriedEvent |
+| `Exceptions\` | WorkflowException (base), InvalidWorkflowDefinitionException, InvalidWorkflowStateException, ActionNotFoundException, StepExecutionException, WorkflowInstanceNotFoundException, ConcurrentModificationException |
 | `Support\` | NullLogger, NullEventDispatcher, SimpleWorkflow, Uuid, Timeout, ConditionEvaluator, Arr |
 | `Storage\` | InMemoryStorage (ships with the package; non-durable) |
 
@@ -81,6 +81,18 @@ PENDING ──→ RUNNING ──→ COMPLETED   (terminal)
 `FAILED` is recoverable: `resume()` returns the instance to `RUNNING` and retries
 the step that failed. A workflow blocked on unmet prerequisites parks in `WAITING`.
 
+A step that returns `ActionResult::suspend($for, $resumeAt)` also parks the instance in
+`WAITING`, with a `Wait` (`getWait()`). Only `signal($id, $for, $payload)` or `resumeDue()`
+(once `resumeAt` has passed) finish that step; `resume()` refuses, so the step never runs twice.
+What resumed it is stored under `steps.<step id>` in the data.
+
+### Storage and concurrency
+
+`StorageAdapter::save()` is a compare-and-swap on `WorkflowInstance::getRevision()`: a save from a
+stale copy throws `ConcurrentModificationException` and writes nothing. `InMemoryStorage` keeps
+snapshots (every `load()` is a fresh copy) and is the reference implementation. Never sleep in the
+engine: delays suspend, and SIGALRM timeouts only run with `signalTimeouts: true`.
+
 Invalid transitions throw `InvalidWorkflowStateException`.
 
 ### Key Contracts
@@ -94,7 +106,7 @@ Every custom integration implements one of these:
 
 ### How Actions Work
 
-Actions are instantiated by `Executor` with `new $actionClass($config, $logger)`. They receive a `WorkflowContext` containing workflowId, stepId, data, config, and the instance reference. They return `ActionResult::success($data)` or `ActionResult::failure($message)`.
+Actions are instantiated by `Executor` with `new $actionClass($config, $logger)`. They receive a `WorkflowContext` containing workflowId, stepId, data, config, and the instance reference. They return `ActionResult::success($data)`, `ActionResult::failure($message)` or `ActionResult::suspend($for, $resumeAt, $data)`.
 
 ## Conventions
 
@@ -154,6 +166,8 @@ $engine = new WorkflowEngine($storageAdapter, $eventDispatcher);
 $instanceId = $engine->start('my-workflow', $definition->toArray(), ['key' => 'value']);
 $instance = $engine->getInstance($instanceId);
 $engine->cancel($instanceId, 'reason');
+$engine->signal($instanceId, 'approved', ['by' => 'ada']);   // finish a suspended step
+$engine->resumeDue();                                         // from a scheduler: end timed waits
 ```
 
 ## CI/CD
@@ -167,7 +181,7 @@ GitHub Actions workflows:
 
 ## File Counts
 
-- 47 source files in `src/`
-- 27 test files in `tests/`
-- 161 tests, 363+ assertions
-- PHPStan level 6 compliance
+- 52 source files in `src/`
+- 26 test files in `tests/`
+- 222 tests, 515+ assertions
+- PHPStan level 9 compliance

@@ -5,6 +5,56 @@ All notable changes to `workflow-engine-core` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v3.0.0 - 2026-11-26
+
+Workflows can now wait for people and for time without holding a PHP process, and two
+processes can no longer overwrite each other's progress. Breaking; see [UPGRADE.md](UPGRADE.md).
+
+### Added
+
+- **`ActionResult::suspend($for, $resumeAt = null, $data = [])`.** A step that has to wait (an
+  approval, a task someone else does, a deadline) returns it. The instance becomes `WAITING`
+  with a `Wait` (`getWait()`: step, signal name, resume time) and the next steps do not run.
+- **`WorkflowEngine::signal($id, $signal, $payload = [])`** finishes the waiting step and carries
+  on. The payload is kept under `steps.<step id>` (`resumed_by`, `payload`, `resumed_at`), so
+  transitions can branch on it: `steps.approve.payload.decision === "approved"`.
+- **`WorkflowEngine::resumeDue($now = null, $limit = 100)`** ends waits whose time has passed
+  (`resumed_by` = `Wait::TIMER`). Run it from a scheduler.
+- **Optimistic locking.** `WorkflowInstance::getRevision()`; `StorageAdapter::save()` is a
+  compare-and-swap on it and throws the new `ConcurrentModificationException` when someone else
+  saved first. A conflict is not recorded as a workflow failure.
+- `WorkflowDefinition::fingerprint()` (SHA-256 of the content, key order ignored); instances
+  record it in `toArray()['definition_fingerprint']`.
+- Events `WorkflowSuspendedEvent` and `WorkflowResumedEvent`.
+- `WorkflowEngine` takes an optional `Logger` and `signalTimeouts` flag.
+- `StorageAdapter::findInstances()` criterion `due_before`.
+
+### Changed (breaking)
+
+- **`DelayAction` suspends instead of `usleep()`.** `->delay(hours: 2)` used to block the process
+  for two hours; it now waits until `resumeDue()` runs after the time. A zero delay completes at once.
+- **Step timeouts are no longer enforced with SIGALRM by default.** `pcntl_alarm()` interrupts
+  whatever runs in the process, which is unsafe in web requests and long-running workers
+  (FrankenPHP, Octane). Pass `signalTimeouts: true` in a CLI worker that runs one workflow at a
+  time, or let your queue enforce the timeout.
+- **`resume()` refuses a suspended instance**: running it again would run the waiting step's
+  action twice. Use `signal()`.
+- **`StorageAdapter::save()` must check and bump the revision**, and persist `getWait()`.
+- `InMemoryStorage` keeps snapshots: every `load()` returns a fresh copy, like a database, and a
+  save from a stale copy is refused.
+- `ActionResult::isFailure()` is false for a suspended result (it is neither success nor failure).
+- **Malformed input is rejected instead of coerced** (PHPStan level 9, was 6, no ignores):
+  - `DefinitionParser` and `WorkflowDefinition::fromArray()` throw `InvalidWorkflowDefinitionException`
+    for a missing or non-string `name`, a non-string `version`, step id or condition, a non-integer
+    `retry_attempts` (`"3"` is rejected), wrongly typed `metadata`, `steps`, `transitions` or step
+    fields, a transition that is not an array, and JSON that is not an object.
+  - `WorkflowInstance::fromArray()` throws `InvalidWorkflowStateException` for malformed
+    `failed_steps`, `data`, `error_message` or timestamps.
+  - `ConditionAction`, `LogAction` and `HttpAction` fail the step with a clear message for wrongly
+    typed config (for example an `HttpAction` timeout of `"abc"` used to become 0). `HttpAction` fails
+    when the URL is empty after templating or the body cannot be JSON-encoded; a template value that
+    is an array renders as JSON instead of `Array`.
+
 ## v2.0.0 - 2026-09-12
 
 Fixes several cases where the engine silently did the wrong thing and still

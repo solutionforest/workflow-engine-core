@@ -7,13 +7,6 @@
 
 A powerful, framework-agnostic workflow engine for PHP applications. This core library provides comprehensive workflow definition, execution, and state management capabilities without any framework dependencies.
 
-> ⚠️ **WARNING: DEVELOPMENT STATUS**⚠️ 
-> 
-> This package is currently under active development and is **NOT READY FOR PRODUCTION USE**. 
-> 
-> Features may be incomplete, APIs might change, and there could be breaking changes. Use at your own risk in development environments only.
-
-
 ## 📋 Requirements
 
 - **PHP 8.3+** - Leverages modern PHP features for type safety and performance
@@ -107,6 +100,45 @@ $instanceId = $engine->start(
 $instance = $engine->getInstance($instanceId);
 echo $instance->getState()->value; // "completed"
 ```
+
+### Waiting for people and time
+
+A step that has to wait (an approval, a task someone else does, a deadline) returns
+`ActionResult::suspend()`. The workflow stops in `WAITING` without holding a process, and
+resumes when a signal arrives or the time passes.
+
+```php
+class RequestApprovalAction extends BaseAction
+{
+    protected function doExecute(WorkflowContext $context): ActionResult
+    {
+        // notify the approvers, then wait for "decided", for at most three days
+        return ActionResult::suspend('decided', new \DateTimeImmutable('+3 days'));
+    }
+}
+
+$engine->start('po-42', $definition, ['amount' => 25_000]);   // stops in WAITING at the approval
+
+// When someone decides:
+$engine->signal('po-42', 'decided', ['decision' => 'approved']);
+
+// From a scheduler, every minute: ends waits whose time has passed (resumed_by = "timer").
+$engine->resumeDue();
+```
+
+- What resumed a step is kept in the data under `steps.<step id>` (`resumed_by`, `payload`,
+  `resumed_at`), so transitions can branch on it:
+  `['from' => 'approve', 'to' => 'order', 'condition' => 'steps.approve.payload.decision === "approved"']`.
+- `DelayAction` / `->delay()` suspends the same way (`Wait::TIMER`); nothing sleeps.
+- `resume()` refuses an instance that waits for a signal, so a waiting step never runs twice.
+- Every save is a compare-and-swap on the instance revision. If two processes advance the same
+  instance, the second gets `ConcurrentModificationException` and writes nothing; load it again
+  and repeat.
+- Step timeouts are enforced with SIGALRM only with `new WorkflowEngine(..., signalTimeouts: true)`
+  in a CLI worker; otherwise let your queue enforce them.
+- Events: `WorkflowSuspendedEvent`, `WorkflowResumedEvent`.
+
+Upgrading from v2: see [UPGRADE.md](UPGRADE.md).
 
 ### Advanced Workflow Builder
 
@@ -544,7 +576,7 @@ composer pint && composer analyze && composer test
 
 We maintain high code quality through:
 
-- **100% PHPStan Level 6** - Static analysis with zero errors across 46 source files
+- **100% PHPStan Level 9** - Static analysis with zero errors across 46 source files
 - **Laravel Pint** - Consistent code formatting following Laravel standards
 - **Comprehensive Testing** - 93 tests with 224+ assertions covering unit, integration, and real-world scenarios
 - **Architecture Tests** - Automated checks preventing debug functions in source code
