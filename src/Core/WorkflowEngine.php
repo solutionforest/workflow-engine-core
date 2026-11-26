@@ -367,6 +367,8 @@ class WorkflowEngine
 
     /**
      * Get workflow status
+     *
+     * @return array{workflow_id: string, name: string, state: string, current_step: string|null, progress: float, created_at: \DateTime, updated_at: \DateTime}
      */
     public function getStatus(string $workflowId): array
     {

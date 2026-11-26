@@ -34,17 +34,55 @@ class HttpAction extends BaseAction
     protected function doExecute(WorkflowContext $context): ActionResult
     {
         $url = $this->getConfig('url');
-        $method = strtoupper($this->getConfig('method', 'GET'));
+        $method = $this->getConfig('method', 'GET');
         $data = $this->getConfig('data', []);
         $headers = $this->getConfig('headers', []);
-        $timeout = (int) $this->getConfig('timeout', 30);
-        $connectTimeout = (int) $this->getConfig('connect_timeout', min(10, $timeout));
-        $verifyTls = (bool) $this->getConfig('verify_tls', true);
-        $maxRedirects = (int) $this->getConfig('max_redirects', 3);
 
         if (! $url) {
             return ActionResult::failure('URL is required for HTTP action');
         }
+
+        if (! is_string($url)) {
+            return ActionResult::failure('HTTP action "url" must be a string');
+        }
+
+        if (! is_string($method) || $method === '') {
+            return ActionResult::failure('HTTP action "method" must be a non-empty string');
+        }
+
+        if (! is_array($data)) {
+            return ActionResult::failure('HTTP action "data" must be an array');
+        }
+
+        if (! is_array($headers)) {
+            return ActionResult::failure('HTTP action "headers" must be an array');
+        }
+
+        $headerLines = [];
+        foreach ($headers as $name => $value) {
+            if (! is_scalar($value)) {
+                return ActionResult::failure("HTTP action header \"{$name}\" must be a scalar value");
+            }
+            $headerLines[$name] = $value;
+        }
+
+        $timeout = $this->intConfig('timeout', 30);
+        if ($timeout === null) {
+            return ActionResult::failure('HTTP action "timeout" must be an integer');
+        }
+
+        $connectTimeout = $this->intConfig('connect_timeout', min(10, $timeout));
+        if ($connectTimeout === null) {
+            return ActionResult::failure('HTTP action "connect_timeout" must be an integer');
+        }
+
+        $maxRedirects = $this->intConfig('max_redirects', 3);
+        if ($maxRedirects === null) {
+            return ActionResult::failure('HTTP action "max_redirects" must be an integer');
+        }
+
+        $verifyTls = (bool) $this->getConfig('verify_tls', true);
+        $method = strtoupper($method);
 
         // ext-curl is a suggested, not required, dependency: report its absence
         // as a normal step failure rather than a fatal "undefined function".
@@ -57,6 +95,10 @@ class HttpAction extends BaseAction
         // Process template variables in URL and data
         $url = $this->processTemplate($url, $context->getData());
         $data = $this->processArrayTemplates($data, $context->getData());
+
+        if ($url === '') {
+            return ActionResult::failure('URL is required for HTTP action');
+        }
 
         try {
             // Initialize cURL
@@ -91,17 +133,17 @@ class HttpAction extends BaseAction
             if ($method !== 'GET') {
                 curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
                 if (! empty($data)) {
-                    $jsonData = json_encode($data);
+                    $jsonData = json_encode($data, JSON_THROW_ON_ERROR);
                     curl_setopt($ch, CURLOPT_POSTFIELDS, $jsonData);
-                    $headers['Content-Type'] = 'application/json';
-                    $headers['Content-Length'] = strlen($jsonData);
+                    $headerLines['Content-Type'] = 'application/json';
+                    $headerLines['Content-Length'] = strlen($jsonData);
                 }
             }
 
             // Set headers
-            if (! empty($headers)) {
+            if ($headerLines !== []) {
                 $headerArray = [];
-                foreach ($headers as $key => $value) {
+                foreach ($headerLines as $key => $value) {
                     $headerArray[] = "{$key}: {$value}";
                 }
                 curl_setopt($ch, CURLOPT_HTTPHEADER, $headerArray);
@@ -125,7 +167,7 @@ class HttpAction extends BaseAction
             $error = curl_error($ch);
             curl_close($ch);
 
-            if ($responseBody === false || $error) {
+            if (! is_string($responseBody) || $error !== '') {
                 return ActionResult::failure(
                     'HTTP request failed: '.($error ?: 'unknown cURL error'),
                     [
@@ -180,15 +222,71 @@ class HttpAction extends BaseAction
      */
     private function processTemplate(string $template, array $data): string
     {
-        return preg_replace_callback('/\{\{\s*([^}]+)\s*\}\}/', function ($matches) use ($data) {
-            return Arr::get($data, trim($matches[1]), $matches[0]);
+        $processed = preg_replace_callback('/\{\{\s*([^}]+)\s*\}\}/', function (array $matches) use ($data): string {
+            return $this->stringify(Arr::get($data, trim($matches[1]), $matches[0]));
         }, $template);
+
+        // preg_replace_callback() only returns null on a PCRE failure (e.g. the
+        // backtrack limit); leave the template untouched rather than blank it.
+        return $processed ?? $template;
     }
 
     /**
-     * @param array<string, mixed> $array
+     * Render a resolved template value the way string interpolation would:
+     * scalars as PHP casts them, null as an empty string, and anything else
+     * (arrays, objects) as JSON.
+     */
+    private function stringify(mixed $value): string
+    {
+        if (is_string($value)) {
+            return $value;
+        }
+
+        if (is_scalar($value)) {
+            return (string) $value;
+        }
+
+        if ($value === null) {
+            return '';
+        }
+
+        if ($value instanceof \Stringable) {
+            return (string) $value;
+        }
+
+        return json_encode($value) ?: '';
+    }
+
+    /**
+     * Read an integer option, accepting integer-like strings and floats.
+     *
+     * Returns null when the configured value is not an integer, so the caller
+     * can fail the step with a clear message instead of silently using 0.
+     */
+    private function intConfig(string $key, int $default): ?int
+    {
+        $value = $this->getConfig($key, $default);
+
+        if (is_int($value)) {
+            return $value;
+        }
+
+        if (is_string($value) && preg_match('/^-?\d+$/', $value) === 1) {
+            return (int) $value;
+        }
+
+        // Fractional seconds were always truncated; keep doing that.
+        if (is_float($value)) {
+            return (int) $value;
+        }
+
+        return null;
+    }
+
+    /**
+     * @param array<array-key, mixed> $array
      * @param array<string, mixed> $data
-     * @return array<string, mixed>
+     * @return array<array-key, mixed>
      */
     private function processArrayTemplates(array $array, array $data): array
     {

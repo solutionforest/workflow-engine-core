@@ -31,6 +31,9 @@ final readonly class StepCompletedEvent
         return $this->step->getId(); // Use ID as name since Step doesn't have a name property
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function getData(): array
     {
         return $this->instance->getData();

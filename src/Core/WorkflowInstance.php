@@ -3,6 +3,7 @@
 namespace SolutionForest\WorkflowEngine\Core;
 
 use SolutionForest\WorkflowEngine\Exceptions\InvalidWorkflowStateException;
+use SolutionForest\WorkflowEngine\Support\Arr;
 
 /**
  * Represents an active instance of a workflow execution.
@@ -476,7 +477,7 @@ final class WorkflowInstance
                 'Cannot restore workflow instance: missing or invalid "id" field.',
                 WorkflowState::PENDING,
                 WorkflowState::PENDING,
-                (string) ($data['id'] ?? '')
+                Arr::describe($data['id'] ?? '')
             );
         }
 
@@ -531,6 +532,59 @@ final class WorkflowInstance
             );
         }
 
+        $normalizedFailedSteps = [];
+        foreach ($failedSteps as $failure) {
+            $failedStepId = is_array($failure) ? ($failure['step_id'] ?? null) : null;
+            $failedError = is_array($failure) ? ($failure['error'] ?? null) : null;
+            $failedAt = is_array($failure) ? ($failure['failed_at'] ?? null) : null;
+
+            if (! is_string($failedStepId) || ! is_string($failedError) || ! is_string($failedAt)) {
+                throw new InvalidWorkflowStateException(
+                    "Cannot restore workflow instance '{$data['id']}': every \"failed_steps\" entry needs string \"step_id\", \"error\" and \"failed_at\" fields.",
+                    $state,
+                    $state,
+                    $data['id']
+                );
+            }
+
+            $normalizedFailedSteps[] = ['step_id' => $failedStepId, 'error' => $failedError, 'failed_at' => $failedAt];
+        }
+
+        $instanceData = $data['data'] ?? [];
+        if (! is_array($instanceData) || ! Arr::isStringKeyed($instanceData)) {
+            throw new InvalidWorkflowStateException(
+                "Cannot restore workflow instance '{$data['id']}': \"data\" must be an associative array.",
+                $state,
+                $state,
+                $data['id']
+            );
+        }
+
+        $errorMessage = $data['error_message'] ?? null;
+        if ($errorMessage !== null && ! is_string($errorMessage)) {
+            throw new InvalidWorkflowStateException(
+                "Cannot restore workflow instance '{$data['id']}': \"error_message\" must be a string or null.",
+                $state,
+                $state,
+                $data['id']
+            );
+        }
+
+        // Timestamps are optional; a payload without them is restored as "now".
+        $timestamps = [];
+        foreach (['created_at', 'updated_at'] as $field) {
+            $value = $data[$field] ?? 'now';
+            if (! is_string($value)) {
+                throw new InvalidWorkflowStateException(
+                    "Cannot restore workflow instance '{$data['id']}': \"{$field}\" must be a date-time string.",
+                    $state,
+                    $state,
+                    $data['id']
+                );
+            }
+            $timestamps[$field] = new \DateTime($value);
+        }
+
         $currentStepId = $data['current_step_id'] ?? null;
         if ($currentStepId !== null && (! is_string($currentStepId) || ! $definition->hasStep($currentStepId))) {
             throw new InvalidWorkflowStateException(
@@ -545,15 +599,15 @@ final class WorkflowInstance
             id: $data['id'],
             definition: $definition,
             state: $state,
-            data: $data['data'] ?? [],
-            createdAt: new \DateTime($data['created_at']),
-            updatedAt: new \DateTime($data['updated_at'])
+            data: $instanceData,
+            createdAt: $timestamps['created_at'],
+            updatedAt: $timestamps['updated_at']
         );
 
         $instance->currentStepId = $currentStepId;
         $instance->completedSteps = $completedSteps;
-        $instance->failedSteps = $failedSteps;
-        $instance->errorMessage = $data['error_message'] ?? null;
+        $instance->failedSteps = $normalizedFailedSteps;
+        $instance->errorMessage = $errorMessage;
         $wait = $data['wait'] ?? null;
         if ($wait !== null) {
             if (! is_array($wait)) {

@@ -46,7 +46,7 @@ class SimpleWorkflow
      * Create a new SimpleWorkflow instance.
      *
      * @param StorageAdapter $storage Storage adapter for workflow persistence
-     * @param Dispatcher|null $eventDispatcher Optional event dispatcher for workflow events
+     * @param EventDispatcher|null $eventDispatcher Optional event dispatcher for workflow events
      */
     public function __construct(StorageAdapter $storage, ?EventDispatcher $eventDispatcher = null)
     {

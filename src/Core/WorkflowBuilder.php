@@ -58,10 +58,10 @@ final class WorkflowBuilder
     /** @var string Human-readable workflow description */
     private string $description = '';
 
-    /** @var array<int, array<string, mixed>> Array of step configurations */
+    /** @var list<array{id: string, action: string, config: array<string, mixed>, timeout: string|int|null, retry_attempts: int, conditions?: list<string>}> Array of step configurations */
     private array $steps = [];
 
-    /** @var array<int, array<string, string>> Array of step transitions */
+    /** @var list<array{from: string, to: string}> Array of step transitions */
     private array $transitions = [];
 
     /** @var array<string, mixed> Additional workflow metadata */
@@ -155,7 +155,7 @@ final class WorkflowBuilder
      * @param string $id Unique step identifier within the workflow
      * @param string|WorkflowAction $action Action class name or instance
      * @param array<string, mixed> $config Step-specific configuration parameters
-     * @param int|null $timeout Maximum execution time in seconds
+     * @param string|int|null $timeout Maximum execution time (seconds, or a string such as "30s")
      * @param int $retryAttempts Number of retry attempts on failure (0-10)
      * @return $this For method chaining
      *
@@ -231,7 +231,7 @@ final class WorkflowBuilder
      *
      * @param string|WorkflowAction $action Action class name or instance
      * @param array<string, mixed> $config Step-specific configuration parameters
-     * @param int|null $timeout Maximum execution time in seconds
+     * @param string|int|null $timeout Maximum execution time (seconds, or a string such as "30s")
      * @param int $retryAttempts Number of retry attempts on failure
      * @return $this For method chaining
      *
@@ -254,7 +254,7 @@ final class WorkflowBuilder
      *
      * @param string|WorkflowAction $action Action class name or instance
      * @param array<string, mixed> $config Step-specific configuration parameters
-     * @param int|null $timeout Maximum execution time in seconds
+     * @param string|int|null $timeout Maximum execution time (seconds, or a string such as "30s")
      * @param int $retryAttempts Number of retry attempts on failure
      * @return $this For method chaining
      *
@@ -508,14 +508,7 @@ final class WorkflowBuilder
         $steps = [];
         foreach ($this->steps as $stepData) {
             // Convert timeout to string format for Step object - keep original format if string, convert integer to string
-            $timeoutString = null;
-            if ($stepData['timeout'] !== null) {
-                if (is_string($stepData['timeout'])) {
-                    $timeoutString = $stepData['timeout']; // Keep original string format
-                } else {
-                    $timeoutString = (string) $stepData['timeout']; // Convert integer to string
-                }
-            }
+            $timeoutString = $stepData['timeout'] === null ? null : (string) $stepData['timeout'];
 
             $steps[] = new Step(
                 id: $stepData['id'],

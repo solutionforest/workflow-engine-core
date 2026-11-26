@@ -2,6 +2,8 @@
 
 namespace SolutionForest\WorkflowEngine\Exceptions;
 
+use SolutionForest\WorkflowEngine\Support\Arr;
+
 /**
  * Thrown when a workflow definition is invalid or malformed.
  *
@@ -68,6 +70,9 @@ final class InvalidWorkflowDefinitionException extends WorkflowException
         }
 
         $definition = $this->getContextValue('definition', []);
+        if (! is_array($definition)) {
+            $definition = [];
+        }
         if (empty($definition['name'])) {
             $suggestions[] = 'Add a "name" field to identify your workflow';
         }
@@ -295,19 +300,19 @@ final class InvalidWorkflowDefinitionException extends WorkflowException
             'Ensure the action class implements the WorkflowAction interface',
         ];
 
-        if (isset($context['tried_classes'])) {
+        if (isset($context['tried_classes']) && is_array($context['tried_classes']) && Arr::isStringArray($context['tried_classes'])) {
             $suggestions[] = 'Tried resolving to classes: '.implode(', ', $context['tried_classes']);
         }
 
-        if (isset($context['predefined_actions'])) {
+        if (isset($context['predefined_actions']) && is_array($context['predefined_actions']) && Arr::isStringArray($context['predefined_actions'])) {
             $suggestions[] = 'Available predefined actions: '.implode(', ', $context['predefined_actions']);
         }
 
-        if (isset($context['custom_actions']) && ! empty($context['custom_actions'])) {
+        if (isset($context['custom_actions']) && is_array($context['custom_actions']) && Arr::isStringArray($context['custom_actions']) && $context['custom_actions'] !== []) {
             $suggestions[] = 'Available custom actions: '.implode(', ', $context['custom_actions']);
         }
 
-        if (isset($context['suggestion'])) {
+        if (isset($context['suggestion']) && is_string($context['suggestion'])) {
             $suggestions[] = $context['suggestion'];
         }
 

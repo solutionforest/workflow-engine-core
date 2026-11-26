@@ -37,6 +37,9 @@ final readonly class StepFailedEvent
         return $this->exception->getMessage();
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function getData(): array
     {
         return $this->instance->getData();

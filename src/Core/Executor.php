@@ -603,6 +603,12 @@ class Executor
     {
         $actionClass = $step->getActionClass();
 
+        // A step without an action has nothing to execute (callers already
+        // guard on hasAction(); this keeps the method total).
+        if ($actionClass === null) {
+            return null;
+        }
+
         if (! class_exists($actionClass)) {
             $context = new WorkflowContext(
                 workflowId: $instance->getId(),

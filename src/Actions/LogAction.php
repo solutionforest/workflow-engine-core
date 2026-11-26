@@ -25,6 +25,14 @@ class LogAction extends BaseAction
         $message = $this->getConfig('message', 'Default log message');
         $level = $this->getConfig('level', 'info');
 
+        if (! is_string($message)) {
+            return ActionResult::failure('Log "message" must be a string');
+        }
+
+        if (! is_string($level)) {
+            return ActionResult::failure('Log "level" must be a string');
+        }
+
         // Replace placeholders in message with workflow data
         $processedMessage = $this->processMessage($message, $context->getData());
 
@@ -49,11 +57,15 @@ class LogAction extends BaseAction
     private function processMessage(string $message, array $data): string
     {
         // Simple placeholder replacement: {key.subkey}
-        return preg_replace_callback('/\{([^}]+)\}/', function ($matches) use ($data) {
+        $processed = preg_replace_callback('/\{([^}]+)\}/', function (array $matches) use ($data): string {
             $key = $matches[1];
             $value = parent::getNestedValue($data, $key, $matches[0]); // Keep placeholder if key not found
 
-            return is_scalar($value) ? (string) $value : json_encode($value);
+            return is_scalar($value) ? (string) $value : (json_encode($value) ?: '');
         }, $message);
+
+        // preg_replace_callback() only returns null on a PCRE failure (e.g. the
+        // backtrack limit); log the raw message rather than an empty one.
+        return $processed ?? $message;
     }
 }
