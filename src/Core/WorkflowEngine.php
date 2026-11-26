@@ -3,9 +3,11 @@
 namespace SolutionForest\WorkflowEngine\Core;
 
 use SolutionForest\WorkflowEngine\Contracts\EventDispatcher;
+use SolutionForest\WorkflowEngine\Contracts\Logger;
 use SolutionForest\WorkflowEngine\Contracts\StorageAdapter;
 use SolutionForest\WorkflowEngine\Events\WorkflowCancelledEvent;
 use SolutionForest\WorkflowEngine\Events\WorkflowStartedEvent;
+use SolutionForest\WorkflowEngine\Exceptions\ConcurrentModificationException;
 use SolutionForest\WorkflowEngine\Exceptions\InvalidWorkflowDefinitionException;
 use SolutionForest\WorkflowEngine\Exceptions\InvalidWorkflowStateException;
 use SolutionForest\WorkflowEngine\Exceptions\WorkflowInstanceNotFoundException;
@@ -70,13 +72,21 @@ class WorkflowEngine
      *
      * @throws \InvalidArgumentException If the storage adapter is not properly configured
      */
+    /**
+     * @param bool $signalTimeouts Enforce step timeouts with SIGALRM (pcntl). Only safe in a CLI
+     *                             worker running one workflow at a time; off by default, so
+     *                             web requests and long-running workers are never interrupted.
+     *                             Adapters normally enforce timeouts with their queue jobs.
+     */
     public function __construct(
         private readonly StorageAdapter $storage,
-        private readonly ?EventDispatcher $eventDispatcher = null
+        private readonly ?EventDispatcher $eventDispatcher = null,
+        ?Logger $logger = null,
+        bool $signalTimeouts = false,
     ) {
         $this->parser = new DefinitionParser;
         $this->stateManager = new StateManager($storage);
-        $this->executor = new Executor($this->stateManager, $eventDispatcher);
+        $this->executor = new Executor($this->stateManager, $eventDispatcher, $logger, $signalTimeouts);
 
         // If no event dispatcher is provided, we'll use a fallback approach
         if ($this->eventDispatcher === null) {
@@ -190,9 +200,74 @@ class WorkflowEngine
             );
         }
 
+        if ($instance->isSuspended()) {
+            throw new InvalidWorkflowStateException(
+                "Cannot resume workflow '{$instanceId}': it waits for '{$instance->getWait()?->for}' in step '{$instance->getWait()?->stepId}'; use signal()",
+                $instance->getState(),
+                WorkflowState::RUNNING,
+                $instanceId
+            );
+        }
+
         $this->executor->execute($instance);
 
         return $instance;
+    }
+
+    /**
+     * Deliver a signal to a suspended workflow: the step that waits for $signal is done, and
+     * the workflow carries on until it completes, fails or suspends again. $payload is kept
+     * under `steps.<step id>.payload` in the workflow data, for later conditions.
+     *
+     * Storage saves are compare-and-swap: if another process advanced the same instance at the
+     * same time, this throws ConcurrentModificationException and nothing of this call is
+     * written; call it again.
+     *
+     * @param array<string, mixed> $payload
+     *
+     * @throws InvalidWorkflowStateException If the workflow is not waiting for $signal
+     * @throws ConcurrentModificationException
+     */
+    public function signal(string $instanceId, string $signal, array $payload = []): WorkflowInstance
+    {
+        if ($signal === Wait::TIMER) {
+            throw new \InvalidArgumentException('The timer is not a signal anyone can send; resumeDue() ends timed waits.');
+        }
+
+        $instance = $this->stateManager->load($instanceId);
+        $this->executor->resumeWait($instance, $signal, $payload);
+
+        return $instance;
+    }
+
+    /**
+     * Resume every suspended workflow whose wait time has passed at $now (default: now). Run it
+     * from a scheduler, for example every minute. An instance that another process advanced in
+     * the meantime is skipped; it is no longer due, or the next run picks it up.
+     *
+     * @return list<string> IDs of the instances it resumed
+     */
+    public function resumeDue(?\DateTimeInterface $now = null, int $limit = 100): array
+    {
+        $now ??= new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
+        $resumed = [];
+        foreach ($this->storage->findInstances(['due_before' => $now, 'limit' => $limit]) as $instance) {
+            if (! $instance->getWait()?->isDue($now)) {
+                continue;
+            }
+            try {
+                $this->executor->resumeWait($instance, Wait::TIMER);
+                $resumed[] = $instance->getId();
+            } catch (ConcurrentModificationException) {
+                continue;
+            } catch (\Throwable) {
+                // The executor recorded the failure on the instance (FAILED) and fired
+                // WorkflowFailedEvent; one broken workflow must not stop the others.
+                $resumed[] = $instance->getId();
+            }
+        }
+
+        return $resumed;
     }
 
     /**

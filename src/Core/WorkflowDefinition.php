@@ -360,6 +360,27 @@ final class WorkflowDefinition
      * file_put_contents('workflow.json', $json);
      * ```
      */
+    /**
+     * A SHA-256 of the definition's content. An instance records it, so you can tell which
+     * version of an edited workflow it runs. Key order does not change it.
+     */
+    public function fingerprint(): string
+    {
+        return hash('sha256', (string) json_encode(self::canonical($this->toArray()), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION));
+    }
+
+    private static function canonical(mixed $value): mixed
+    {
+        if (! is_array($value)) {
+            return $value;
+        }
+        if (! array_is_list($value)) {
+            ksort($value);
+        }
+
+        return array_map(self::canonical(...), $value);
+    }
+
     public function toArray(): array
     {
         return [

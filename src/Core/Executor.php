@@ -10,7 +10,11 @@ use SolutionForest\WorkflowEngine\Events\StepFailedEvent;
 use SolutionForest\WorkflowEngine\Events\StepRetriedEvent;
 use SolutionForest\WorkflowEngine\Events\WorkflowCompletedEvent;
 use SolutionForest\WorkflowEngine\Events\WorkflowFailedEvent;
+use SolutionForest\WorkflowEngine\Events\WorkflowResumedEvent;
+use SolutionForest\WorkflowEngine\Events\WorkflowSuspendedEvent;
 use SolutionForest\WorkflowEngine\Exceptions\ActionNotFoundException;
+use SolutionForest\WorkflowEngine\Exceptions\ConcurrentModificationException;
+use SolutionForest\WorkflowEngine\Exceptions\InvalidWorkflowStateException;
 use SolutionForest\WorkflowEngine\Exceptions\StepExecutionException;
 use SolutionForest\WorkflowEngine\Support\NullEventDispatcher;
 use SolutionForest\WorkflowEngine\Support\NullLogger;
@@ -88,7 +92,8 @@ class Executor
     public function __construct(
         StateManager $stateManager,
         ?EventDispatcher $eventDispatcher = null,
-        ?Logger $logger = null
+        ?Logger $logger = null,
+        private readonly bool $signalTimeouts = false,
     ) {
         $this->stateManager = $stateManager;
         $this->eventDispatcher = $eventDispatcher ?? new NullEventDispatcher;
@@ -120,6 +125,9 @@ class Executor
     {
         try {
             $this->processWorkflow($instance);
+        } catch (ConcurrentModificationException $e) {
+            // Someone else advanced the instance; nothing failed. The caller reloads and retries.
+            throw $e;
         } catch (\Throwable $e) {
             $this->logger->error('Workflow execution failed', [
                 'workflow_id' => $instance->getId(),
@@ -166,8 +174,89 @@ class Executor
      * @throws StepExecutionException If step execution fails
      * @throws ActionNotFoundException If required action classes are missing
      */
+    /**
+     * Finish the suspended step of $instance because $signal arrived (or Wait::TIMER, when its
+     * time passed), then carry on with the next steps.
+     *
+     * What resumed it is kept in the workflow data under `steps.<step id>`: `resumed_by`
+     * (the signal name), `payload` and `resumed_at`, so later conditions can branch on it,
+     * for example `steps.approve.payload.decision === "approved"`.
+     *
+     * @param array<string, mixed> $payload
+     *
+     * @throws InvalidWorkflowStateException If the instance is not waiting for $signal
+     */
+    public function resumeWait(WorkflowInstance $instance, string $signal, array $payload = []): void
+    {
+        $wait = $instance->getWait();
+        if ($wait === null || $instance->getState() !== WorkflowState::WAITING) {
+            throw new InvalidWorkflowStateException(
+                "Workflow '{$instance->getId()}' is not waiting for anything",
+                $instance->getState(),
+                WorkflowState::RUNNING,
+                $instance->getId()
+            );
+        }
+        if ($signal !== $wait->for && $signal !== Wait::TIMER) {
+            throw new InvalidWorkflowStateException(
+                "Workflow '{$instance->getId()}' waits for '{$wait->for}' in step '{$wait->stepId}', not for '{$signal}'",
+                $instance->getState(),
+                WorkflowState::RUNNING,
+                $instance->getId()
+            );
+        }
+        if ($signal === Wait::TIMER && $wait->resumeAt === null) {
+            throw new InvalidWorkflowStateException(
+                "Workflow '{$instance->getId()}' waits for '{$wait->for}' with no time limit",
+                $instance->getState(),
+                WorkflowState::RUNNING,
+                $instance->getId()
+            );
+        }
+        $step = $instance->getDefinition()->getStep($wait->stepId)
+            ?? throw new InvalidWorkflowStateException(
+                "Workflow '{$instance->getId()}' waits in step '{$wait->stepId}', which its definition does not have",
+                $instance->getState(),
+                WorkflowState::RUNNING,
+                $instance->getId()
+            );
+
+        $data = $instance->getData();
+        $steps = is_array($data['steps'] ?? null) ? $data['steps'] : [];
+        $steps[$wait->stepId] = [
+            'resumed_by' => $signal,
+            'payload' => $payload,
+            'resumed_at' => (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->format(\DateTimeInterface::ATOM),
+        ];
+        $data['steps'] = $steps;
+        $instance->setData($data);
+        $instance->setWait(null);
+        $this->stateManager->markStepCompleted($instance, $wait->stepId);
+
+        $this->eventDispatcher->dispatch(new WorkflowResumedEvent($instance, $step, $wait, $signal, $payload));
+        $this->eventDispatcher->dispatch(new StepCompletedEvent($instance, $step));
+        $this->logger->info('Workflow resumed', [
+            'workflow_id' => $instance->getId(),
+            'step_id' => $wait->stepId,
+            'signal' => $signal,
+        ]);
+
+        $this->execute($instance);
+    }
+
     private function processWorkflow(WorkflowInstance $instance): void
     {
+        // A suspended step finishes only through resumeWait(): running the workflow again
+        // would run that step's action a second time.
+        if ($instance->isSuspended()) {
+            throw new InvalidWorkflowStateException(
+                "Workflow '{$instance->getId()}' waits for '{$instance->getWait()?->for}'; deliver it with WorkflowEngine::signal()",
+                $instance->getState(),
+                WorkflowState::RUNNING,
+                $instance->getId()
+            );
+        }
+
         // If workflow is not running, transition it to running. FAILED is
         // included so that resuming a failed workflow actually retries it
         // instead of executing steps while still marked failed (which would
@@ -229,7 +318,9 @@ class Executor
                     continue; // Skip steps that can't be executed yet
                 }
 
-                $this->executeStep($instance, $step);
+                if ($this->executeStep($instance, $step)) {
+                    return; // the step suspended the workflow
+                }
                 $progressed = true;
             }
 
@@ -268,7 +359,7 @@ class Executor
      * @throws StepExecutionException If the step fails to execute
      * @throws ActionNotFoundException If the action class doesn't exist
      */
-    private function executeStep(WorkflowInstance $instance, Step $step): void
+    private function executeStep(WorkflowInstance $instance, Step $step): bool
     {
         // Evaluate step conditions. Steps whose conditions don't match the current
         // workflow data are skipped (marked completed without running the action)
@@ -283,7 +374,7 @@ class Executor
             $instance->setCurrentStepId($step->getId());
             $this->stateManager->markStepCompleted($instance, $step->getId());
 
-            return;
+            return false;
         }
 
         $this->logger->info('Executing workflow step', [
@@ -298,8 +389,26 @@ class Executor
         $this->stateManager->save($instance);
 
         try {
-            if ($step->hasAction()) {
-                $this->executeActionWithRetry($instance, $step);
+            $suspension = $step->hasAction() ? $this->executeActionWithRetry($instance, $step) : null;
+            if ($suspension !== null) {
+                $wait = new Wait(
+                    $step->getId(),
+                    $suspension->for,
+                    $suspension->resumeAt,
+                    new \DateTimeImmutable('now', new \DateTimeZone('UTC')),
+                );
+                $instance->setWait($wait);
+                $instance->setState(WorkflowState::WAITING);
+                $this->stateManager->save($instance);
+                $this->eventDispatcher->dispatch(new WorkflowSuspendedEvent($instance, $step, $wait));
+                $this->logger->info('Workflow step suspended', [
+                    'workflow_id' => $instance->getId(),
+                    'step_id' => $step->getId(),
+                    'waits_for' => $wait->for,
+                    'resume_at' => $wait->resumeAt?->format(\DateTimeInterface::ATOM),
+                ]);
+
+                return true;
             }
 
             // Mark step as completed
@@ -310,6 +419,8 @@ class Executor
                 'workflow_id' => $instance->getId(),
                 'step_id' => $step->getId(),
             ]);
+
+            return false;
         } catch (\Throwable $e) {
             $context = new WorkflowContext(
                 workflowId: $instance->getId(),
@@ -359,22 +470,18 @@ class Executor
      */
     private const MAX_BACKOFF_MICROSECONDS = 2_000_000; // 2 seconds
 
-    private function executeActionWithRetry(WorkflowInstance $instance, Step $step): void
+    private function executeActionWithRetry(WorkflowInstance $instance, Step $step): ?Suspension
     {
         $maxAttempts = $step->getRetryAttempts() + 1; // +1 for initial attempt
 
         if ($maxAttempts <= 1) {
             // No retries configured, execute directly
-            $this->executeAction($instance, $step);
-
-            return;
+            return $this->executeAction($instance, $step);
         }
 
         for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
             try {
-                $this->executeAction($instance, $step);
-
-                return; // Success — exit retry loop
+                return $this->executeAction($instance, $step); // Success (or suspended) — exit retry loop
             } catch (\Throwable $e) {
                 if ($attempt === $maxAttempts) {
                     $this->logger->error('Step failed after all retry attempts', [
@@ -410,6 +517,8 @@ class Executor
                 usleep($backoffMicroseconds);
             }
         }
+
+        return null;
     }
 
     /**
@@ -490,7 +599,7 @@ class Executor
      * @throws ActionNotFoundException If the action class doesn't exist or implement the interface
      * @throws StepExecutionException If action execution fails
      */
-    private function executeAction(WorkflowInstance $instance, Step $step): void
+    private function executeAction(WorkflowInstance $instance, Step $step): ?Suspension
     {
         $actionClass = $step->getActionClass();
 
@@ -528,7 +637,10 @@ class Executor
             instance: $instance
         );
 
-        $timeoutValue = $step->getTimeout();
+        // Timeouts by SIGALRM are only safe in a CLI worker that runs one workflow at a time;
+        // elsewhere (web requests, FrankenPHP / Octane workers) the adapter enforces them, for
+        // example with the queue job's timeout.
+        $timeoutValue = $this->signalTimeouts ? $step->getTimeout() : null;
         if ($timeoutValue !== null) {
             $timeoutSeconds = Timeout::toSeconds($timeoutValue);
             $result = $this->executeWithTimeout(
@@ -539,18 +651,24 @@ class Executor
             $result = $action->execute($context);
         }
 
-        if ($result->isSuccess()) {
+        if (! $result instanceof ActionResult) {
+            throw StepExecutionException::actionFailed('The action did not return an ActionResult', $step, $context);
+        }
+
+        if ($result->isSuccess() || $result->isSuspended()) {
             // Merge any output data from the action
             if ($result->hasData()) {
                 $instance->mergeData($result->getData());
                 $this->stateManager->save($instance);
             }
-        } else {
-            throw StepExecutionException::actionFailed(
-                $result->getErrorMessage() ?? 'Action execution failed without specific error message',
-                $step,
-                $context
-            );
+
+            return $result->getSuspension();
         }
+
+        throw StepExecutionException::actionFailed(
+            $result->getErrorMessage() ?? 'Action execution failed without specific error message',
+            $step,
+            $context
+        );
     }
 }

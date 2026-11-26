@@ -3,10 +3,12 @@
 namespace SolutionForest\WorkflowEngine\Actions;
 
 use SolutionForest\WorkflowEngine\Core\ActionResult;
+use SolutionForest\WorkflowEngine\Core\Wait;
 use SolutionForest\WorkflowEngine\Core\WorkflowContext;
 
 /**
- * A delay action that can be used to pause workflow execution
+ * Pauses the workflow for a time without holding a process: it suspends until
+ * WorkflowEngine::resumeDue() runs after the time has passed
  */
 class DelayAction extends BaseAction
 {
@@ -17,7 +19,7 @@ class DelayAction extends BaseAction
 
     public function getDescription(): string
     {
-        return 'Adds a delay to workflow execution';
+        return 'Waits for a time, then continues';
     }
 
     protected function doExecute(WorkflowContext $context): ActionResult
@@ -55,14 +57,22 @@ class DelayAction extends BaseAction
             $totalMicroseconds = $units['seconds'];
         }
 
-        if ($totalMicroseconds > 0) {
-            usleep((int) $totalMicroseconds);
-        }
-
-        return ActionResult::success([
+        // v3: a delay no longer sleeps in the process. The workflow suspends and
+        // WorkflowEngine::resumeDue() resumes it once the time has passed. A zero delay
+        // completes at once.
+        $now = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
+        $data = [
             'delayed_seconds' => $totalMicroseconds / 1_000_000,
             'delayed_microseconds' => (int) $totalMicroseconds,
-            'delayed_at' => (new \DateTime('now', new \DateTimeZone('UTC')))->format('c'),
-        ]);
+            'delayed_at' => $now->format('c'),
+        ];
+
+        if ($totalMicroseconds <= 0) {
+            return ActionResult::success($data);
+        }
+
+        $resumeAt = $now->modify('+'.(int) $totalMicroseconds.' microseconds');
+
+        return ActionResult::suspend(Wait::TIMER, $resumeAt, $data + ['resume_at' => $resumeAt->format('c')]);
     }
 }
