@@ -1,9 +1,5 @@
 parameters:
-    level: 6
+    level: 9
     paths:
         - src
     tmpDir: build/phpstan
-    ignoreErrors:
-        - '#has no value type specified in iterable type array#'
-        - '#PHPDoc tag @param for parameter .+ with type .+ is not subtype of native type#'
-        - '#Parameter .+ has invalid type#'

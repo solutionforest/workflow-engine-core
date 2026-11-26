@@ -327,7 +327,8 @@ class ActionResolver
     private static function normalizeActionName(string $actionName): string
     {
         // Convert to snake_case first, then to PascalCase
-        $snakeCase = strtolower(preg_replace('/[A-Z]/', '_$0', $actionName));
+        // preg_replace() only returns null on a PCRE failure; fall back to the raw name.
+        $snakeCase = strtolower(preg_replace('/[A-Z]/', '_$0', $actionName) ?? $actionName);
         $snakeCase = str_replace(['-', ' '], '_', $snakeCase);
         $snakeCase = trim($snakeCase, '_');
 

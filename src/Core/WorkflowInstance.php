@@ -3,6 +3,7 @@
 namespace SolutionForest\WorkflowEngine\Core;
 
 use SolutionForest\WorkflowEngine\Exceptions\InvalidWorkflowStateException;
+use SolutionForest\WorkflowEngine\Support\Arr;
 
 /**
  * Represents an active instance of a workflow execution.
@@ -109,6 +110,16 @@ final class WorkflowInstance
 
     /** @var string|null Overall workflow error message if execution failed */
     private ?string $errorMessage = null;
+
+    /** What the workflow waits for while suspended (WAITING after ActionResult::suspend()). */
+    private ?Wait $wait = null;
+
+    /**
+     * How many times storage has saved this instance. Storage refuses a save whose revision
+     * is not the stored one (optimistic locking), so two processes advancing the same
+     * instance cannot overwrite each other.
+     */
+    private int $revision = 0;
 
     /** @var \DateTime When this workflow instance was created */
     private readonly \DateTime $createdAt;
@@ -313,6 +324,36 @@ final class WorkflowInstance
         $this->updatedAt = new \DateTime('now', new \DateTimeZone('UTC'));
     }
 
+    /** What the workflow waits for, while suspended. */
+    public function getWait(): ?Wait
+    {
+        return $this->wait;
+    }
+
+    public function setWait(?Wait $wait): void
+    {
+        $this->wait = $wait;
+        $this->updatedAt = new \DateTime('now', new \DateTimeZone('UTC'));
+    }
+
+    /** Whether a step suspended the workflow and it waits for a signal or a time. */
+    public function isSuspended(): bool
+    {
+        return $this->wait !== null;
+    }
+
+    /** The revision storage last saved (0: never saved). */
+    public function getRevision(): int
+    {
+        return $this->revision;
+    }
+
+    /** For storage adapters only: record the revision a save wrote. */
+    public function setRevision(int $revision): void
+    {
+        $this->revision = $revision;
+    }
+
     /**
      * Get the workflow instance creation timestamp.
      *
@@ -406,6 +447,9 @@ final class WorkflowInstance
             'completed_steps' => $this->completedSteps,
             'failed_steps' => $this->failedSteps,
             'error_message' => $this->errorMessage,
+            'wait' => $this->wait?->toArray(),
+            'revision' => $this->revision,
+            'definition_fingerprint' => $this->definition->fingerprint(),
             'created_at' => $this->createdAt->format('c'),
             'updated_at' => $this->updatedAt->format('c'),
         ];
@@ -433,7 +477,7 @@ final class WorkflowInstance
                 'Cannot restore workflow instance: missing or invalid "id" field.',
                 WorkflowState::PENDING,
                 WorkflowState::PENDING,
-                (string) ($data['id'] ?? '')
+                Arr::describe($data['id'] ?? '')
             );
         }
 
@@ -488,6 +532,59 @@ final class WorkflowInstance
             );
         }
 
+        $normalizedFailedSteps = [];
+        foreach ($failedSteps as $failure) {
+            $failedStepId = is_array($failure) ? ($failure['step_id'] ?? null) : null;
+            $failedError = is_array($failure) ? ($failure['error'] ?? null) : null;
+            $failedAt = is_array($failure) ? ($failure['failed_at'] ?? null) : null;
+
+            if (! is_string($failedStepId) || ! is_string($failedError) || ! is_string($failedAt)) {
+                throw new InvalidWorkflowStateException(
+                    "Cannot restore workflow instance '{$data['id']}': every \"failed_steps\" entry needs string \"step_id\", \"error\" and \"failed_at\" fields.",
+                    $state,
+                    $state,
+                    $data['id']
+                );
+            }
+
+            $normalizedFailedSteps[] = ['step_id' => $failedStepId, 'error' => $failedError, 'failed_at' => $failedAt];
+        }
+
+        $instanceData = $data['data'] ?? [];
+        if (! is_array($instanceData) || ! Arr::isStringKeyed($instanceData)) {
+            throw new InvalidWorkflowStateException(
+                "Cannot restore workflow instance '{$data['id']}': \"data\" must be an associative array.",
+                $state,
+                $state,
+                $data['id']
+            );
+        }
+
+        $errorMessage = $data['error_message'] ?? null;
+        if ($errorMessage !== null && ! is_string($errorMessage)) {
+            throw new InvalidWorkflowStateException(
+                "Cannot restore workflow instance '{$data['id']}': \"error_message\" must be a string or null.",
+                $state,
+                $state,
+                $data['id']
+            );
+        }
+
+        // Timestamps are optional; a payload without them is restored as "now".
+        $timestamps = [];
+        foreach (['created_at', 'updated_at'] as $field) {
+            $value = $data[$field] ?? 'now';
+            if (! is_string($value)) {
+                throw new InvalidWorkflowStateException(
+                    "Cannot restore workflow instance '{$data['id']}': \"{$field}\" must be a date-time string.",
+                    $state,
+                    $state,
+                    $data['id']
+                );
+            }
+            $timestamps[$field] = new \DateTime($value);
+        }
+
         $currentStepId = $data['current_step_id'] ?? null;
         if ($currentStepId !== null && (! is_string($currentStepId) || ! $definition->hasStep($currentStepId))) {
             throw new InvalidWorkflowStateException(
@@ -502,15 +599,37 @@ final class WorkflowInstance
             id: $data['id'],
             definition: $definition,
             state: $state,
-            data: $data['data'] ?? [],
-            createdAt: new \DateTime($data['created_at']),
-            updatedAt: new \DateTime($data['updated_at'])
+            data: $instanceData,
+            createdAt: $timestamps['created_at'],
+            updatedAt: $timestamps['updated_at']
         );
 
         $instance->currentStepId = $currentStepId;
         $instance->completedSteps = $completedSteps;
-        $instance->failedSteps = $failedSteps;
-        $instance->errorMessage = $data['error_message'] ?? null;
+        $instance->failedSteps = $normalizedFailedSteps;
+        $instance->errorMessage = $errorMessage;
+        $wait = $data['wait'] ?? null;
+        if ($wait !== null) {
+            if (! is_array($wait)) {
+                throw new InvalidWorkflowStateException(
+                    "Cannot restore workflow instance '{$data['id']}': \"wait\" must be an array or null.",
+                    $state,
+                    $state,
+                    $data['id']
+                );
+            }
+            $instance->wait = Wait::fromArray($wait);
+            if (! $definition->hasStep($instance->wait->stepId)) {
+                throw new InvalidWorkflowStateException(
+                    "Cannot restore workflow instance '{$data['id']}': it waits in step '{$instance->wait->stepId}', which is not defined in the workflow.",
+                    $state,
+                    $state,
+                    $data['id']
+                );
+            }
+        }
+        $revision = $data['revision'] ?? 0;
+        $instance->revision = is_int($revision) && $revision >= 0 ? $revision : 0;
 
         return $instance;
     }

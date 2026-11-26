@@ -51,6 +51,10 @@ class ConditionAction extends BaseAction
             return ActionResult::failure('Condition is required');
         }
 
+        if (! is_string($condition)) {
+            return ActionResult::failure('Condition must be a string expression');
+        }
+
         try {
             $result = $this->evaluateCondition($condition, $context->getData());
 
@@ -67,11 +71,6 @@ class ConditionAction extends BaseAction
         }
     }
 
-    /**
-     * Enhanced condition evaluation with PHP 8.3+ match expressions
-     *
-     * @param array<string, mixed> $data
-     */
     /**
      * Evaluate a condition expression against workflow data.
      *

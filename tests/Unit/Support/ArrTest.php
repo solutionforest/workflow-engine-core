@@ -63,4 +63,27 @@ describe('Arr', function () {
             expect($data['name'])->toBe('Jane');
         });
     });
+
+    describe('type guards', function () {
+        test('isStringKeyed accepts maps and the empty array', function () {
+            expect(Arr::isStringKeyed(['a' => 1, 'b' => 2]))->toBeTrue();
+            expect(Arr::isStringKeyed([]))->toBeTrue();
+            expect(Arr::isStringKeyed(['a' => 1, 0 => 2]))->toBeFalse();
+            expect(Arr::isStringKeyed([1, 2]))->toBeFalse();
+        });
+
+        test('isStringArray requires every value to be a string', function () {
+            expect(Arr::isStringArray(['a', 'b']))->toBeTrue();
+            expect(Arr::isStringArray([]))->toBeTrue();
+            expect(Arr::isStringArray(['a', 1]))->toBeFalse();
+        });
+
+        test('describe renders values for error messages', function () {
+            expect(Arr::describe('abc'))->toBe('abc');
+            expect(Arr::describe(5))->toBe('5');
+            expect(Arr::describe(null))->toBe('NULL');
+            expect(Arr::describe(['x']))->toBe('array');
+            expect(Arr::describe(new stdClass))->toBe('stdClass');
+        });
+    });
 });

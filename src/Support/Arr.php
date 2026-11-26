@@ -52,6 +52,59 @@ final class Arr
     }
 
     /**
+     * Whether every key of the array is a string (vacuously true when empty).
+     *
+     * @param array<mixed> $array
+     *
+     * @phpstan-assert-if-true array<string, mixed> $array
+     */
+    public static function isStringKeyed(array $array): bool
+    {
+        foreach (array_keys($array) as $key) {
+            if (! is_string($key)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Whether every value of the array is a string (vacuously true when empty).
+     *
+     * @param array<mixed> $array
+     *
+     * @phpstan-assert-if-true array<string> $array
+     */
+    public static function isStringArray(array $array): bool
+    {
+        foreach ($array as $value) {
+            if (! is_string($value)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Describe an arbitrary value for an error message: strings verbatim,
+     * other scalars as PHP literals, everything else by type name.
+     */
+    public static function describe(mixed $value): string
+    {
+        if (is_string($value)) {
+            return $value;
+        }
+
+        if (is_scalar($value) || $value === null) {
+            return var_export($value, true);
+        }
+
+        return get_debug_type($value);
+    }
+
+    /**
      * Get the class "basename" of a class string (without namespace).
      */
     public static function classBasename(string $class): string

@@ -96,7 +96,7 @@ final readonly class WorkflowContext
      *
      * @param string|null $key Data key (supports dot notation for nested access), or null for all data
      * @param mixed $default Default value to return if key doesn't exist
-     * @return mixed Complete data array when key is null, or specific value when key is provided
+     * @return ($key is null ? array<string, mixed> : mixed) Complete data array when key is null, or specific value when key is provided
      *
      * @example
      * ```php

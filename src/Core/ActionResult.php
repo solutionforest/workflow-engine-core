@@ -87,8 +87,13 @@ final class ActionResult
         private readonly bool $success,
         private readonly ?string $errorMessage = null,
         private readonly array $data = [],
-        private readonly array $metadata = []
-    ) {}
+        private readonly array $metadata = [],
+        private readonly ?Suspension $suspension = null,
+    ) {
+        if ($suspension !== null && ($success || $errorMessage !== null)) {
+            throw new \LogicException('A suspended result is neither a success nor a failure.');
+        }
+    }
 
     /**
      * Create a successful action result.
@@ -117,7 +122,7 @@ final class ActionResult
      * );
      * ```
      */
-    public static function success(array $data = [], array $metadata = []): static
+    public static function success(array $data = [], array $metadata = []): self
     {
         return new self(true, null, $data, $metadata);
     }
@@ -149,9 +154,40 @@ final class ActionResult
      * );
      * ```
      */
-    public static function failure(string $errorMessage, array $metadata = []): static
+    public static function failure(string $errorMessage, array $metadata = []): self
     {
         return new self(false, $errorMessage, [], $metadata);
+    }
+
+    /**
+     * The step is not finished yet: the workflow waits, without holding a process, until
+     * WorkflowEngine::signal() delivers $for, or until $resumeAt passes, whichever is first.
+     * Use Wait::TIMER as $for to wait for the time only. $data is merged into the workflow
+     * data now, as with success().
+     *
+     * Example: an approval step notifies the approvers and returns suspend('approved').
+     *
+     * @param array<string, mixed> $data
+     * @param array<string, mixed> $metadata
+     */
+    public static function suspend(string $for, ?\DateTimeInterface $resumeAt = null, array $data = [], array $metadata = []): self
+    {
+        return new self(false, null, $data, $metadata, new Suspension(
+            $for,
+            $resumeAt === null ? null : \DateTimeImmutable::createFromInterface($resumeAt),
+        ));
+    }
+
+    /** Whether the step asked to wait (see suspend()). */
+    public function isSuspended(): bool
+    {
+        return $this->suspension !== null;
+    }
+
+    /** What the step waits for, when suspended. */
+    public function getSuspension(): ?Suspension
+    {
+        return $this->suspension;
     }
 
     /**
@@ -188,7 +224,7 @@ final class ActionResult
      */
     public function isFailure(): bool
     {
-        return ! $this->success;
+        return ! $this->success && $this->suspension === null;
     }
 
     /**
@@ -296,7 +332,8 @@ final class ActionResult
             $this->success,
             $this->errorMessage,
             $this->data,
-            array_merge($this->metadata, $metadata)
+            array_merge($this->metadata, $metadata),
+            $this->suspension,
         );
     }
 
@@ -349,6 +386,7 @@ final class ActionResult
             'error_message' => $this->errorMessage,
             'data' => $this->data,
             'metadata' => $this->metadata,
+            'suspended' => $this->suspension?->toArray(),
         ];
     }
 
@@ -402,8 +440,8 @@ final class ActionResult
      */
     public function mergeData(array $additionalData): self
     {
-        if ($this->isFailure()) {
-            throw new \LogicException('Cannot merge data on a failed ActionResult');
+        if (! $this->success) {
+            throw new \LogicException('Cannot merge data on a failed or suspended ActionResult');
         }
 
         return self::success(

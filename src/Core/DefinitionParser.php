@@ -3,6 +3,7 @@
 namespace SolutionForest\WorkflowEngine\Core;
 
 use SolutionForest\WorkflowEngine\Exceptions\InvalidWorkflowDefinitionException;
+use SolutionForest\WorkflowEngine\Support\Arr;
 
 /**
  * Parses and validates workflow definitions from various formats.
@@ -127,14 +128,18 @@ class DefinitionParser
                     ['JSON parsing failed with error code: '.json_last_error()]
                 );
             }
+            if (! is_array($decoded) || ! Arr::isStringKeyed($decoded)) {
+                throw new InvalidWorkflowDefinitionException(
+                    'Invalid JSON workflow definition: the document must be a JSON object',
+                    ['raw_definition' => substr($definition, 0, 200)],
+                    ['Expected a JSON object at the top level, got: '.get_debug_type($decoded)]
+                );
+            }
             $definition = $decoded;
         }
 
-        // Validate the complete definition structure
-        $this->validateDefinition($definition);
-
-        // Normalize steps before creating WorkflowDefinition
-        $definition['steps'] = $this->normalizeSteps($definition['steps']);
+        // Validate the complete definition structure; steps come back normalized
+        $definition['steps'] = $this->validateDefinition($definition);
 
         return WorkflowDefinition::fromArray($definition);
     }
@@ -147,12 +152,13 @@ class DefinitionParser
      * Throws detailed exceptions with context for any validation failures.
      *
      * @param array<string, mixed> $definition The workflow definition to validate
+     * @return array<string, array<string, mixed>> The validated steps, normalized and keyed by ID
      *
      * @throws InvalidWorkflowDefinitionException If any validation rules fail
      *
      * @internal Called during definition parsing
      */
-    private function validateDefinition(array $definition): void
+    private function validateDefinition(array $definition): array
     {
         // Validate required name field
         if (! isset($definition['name'])) {
@@ -160,7 +166,7 @@ class DefinitionParser
         }
 
         if (! is_string($definition['name']) || empty(trim($definition['name']))) {
-            throw InvalidWorkflowDefinitionException::invalidName($definition['name']);
+            throw InvalidWorkflowDefinitionException::invalidName(Arr::describe($definition['name']));
         }
 
         // Validate required steps field
@@ -191,6 +197,14 @@ class DefinitionParser
         // Validate transitions if present
         if (isset($definition['transitions']) && is_array($definition['transitions'])) {
             foreach ($definition['transitions'] as $transitionIndex => $transition) {
+                if (! is_array($transition) || ! Arr::isStringKeyed($transition)) {
+                    throw new InvalidWorkflowDefinitionException(
+                        "Transition at index {$transitionIndex} must be an array with 'from' and 'to' fields",
+                        ['transition' => $transition, 'available_steps' => array_keys($steps)],
+                        ['Expected an associative array for transition, got: '.get_debug_type($transition)]
+                    );
+                }
+
                 $this->validateTransition($transition, $steps, $transitionIndex);
             }
 
@@ -214,6 +228,8 @@ class DefinitionParser
                 ['Expected array for metadata field, got: '.gettype($definition['metadata'])]
             );
         }
+
+        return $steps;
     }
 
     /**
@@ -225,7 +241,7 @@ class DefinitionParser
      * orphaned branch — so an unreachable step is rejected at parse time.
      *
      * @param array<string, array<string, mixed>> $steps Normalized steps keyed by ID
-     * @param array<int, mixed> $transitions Raw transition list
+     * @param array<mixed> $transitions Raw transition list
      * @param array<string, mixed> $definition The full definition, for error context
      *
      * @throws InvalidWorkflowDefinitionException If any step is unreachable
@@ -240,12 +256,16 @@ class DefinitionParser
         $hasIncoming = [];
 
         foreach ($transitions as $transition) {
-            if (! is_array($transition) || ! isset($transition['from'], $transition['to'])) {
-                continue; // Already reported by validateTransition().
+            if (! is_array($transition)) {
+                continue; // Already reported by validateDefinition().
             }
 
-            $from = (string) $transition['from'];
-            $to = (string) $transition['to'];
+            $from = $transition['from'] ?? null;
+            $to = $transition['to'] ?? null;
+
+            if (! is_string($from) || ! is_string($to)) {
+                continue; // Already reported by validateTransition().
+            }
 
             $outgoing[$from][] = $to;
             $hasIncoming[$to] = true;
@@ -309,7 +329,7 @@ class DefinitionParser
      * where step IDs are keys and step configurations are values. Handles both
      * sequential arrays with 'id' properties and pre-normalized associative arrays.
      *
-     * @param array<int|string, mixed> $steps Raw steps array in various formats
+     * @param array<mixed> $steps Raw steps array in various formats
      * @return array<string, array<string, mixed>> Normalized steps indexed by ID
      *
      * @throws InvalidWorkflowDefinitionException If step structure is invalid
@@ -333,14 +353,8 @@ class DefinitionParser
      */
     private function normalizeSteps(array $steps): array
     {
-        // If steps is already associative, return as-is
-        if (! array_is_list($steps)) {
-            // Type hint: already associative array with string keys
-            /** @var array<string, array<string, mixed>> $steps */
-            return $steps;
-        }
+        $isList = array_is_list($steps);
 
-        // Convert sequential array with 'id' property to associative
         $normalizedSteps = [];
         foreach ($steps as $index => $step) {
             if (! is_array($step)) {
@@ -351,6 +365,26 @@ class DefinitionParser
                 );
             }
 
+            if (! Arr::isStringKeyed($step)) {
+                throw new InvalidWorkflowDefinitionException(
+                    "Step at index {$index} must be an associative array of step fields",
+                    ['step_data' => $step, 'step_index' => $index],
+                    ["Step {$index} contains non-string keys; expected fields such as 'action' and 'parameters'"]
+                );
+            }
+
+            // Already associative: the key is the step ID
+            if (! $isList) {
+                if (! is_string($index)) {
+                    throw InvalidWorkflowDefinitionException::invalidStepId((string) $index);
+                }
+
+                $normalizedSteps[$index] = $step;
+
+                continue;
+            }
+
+            // Sequential array: the step ID comes from its 'id' property
             if (! isset($step['id'])) {
                 throw new InvalidWorkflowDefinitionException(
                     "Step at index {$index} must have an 'id' property when using sequential array format",
@@ -361,7 +395,7 @@ class DefinitionParser
 
             $stepId = $step['id'];
             if (! is_string($stepId) || empty(trim($stepId))) {
-                throw InvalidWorkflowDefinitionException::invalidStepId($stepId);
+                throw InvalidWorkflowDefinitionException::invalidStepId(Arr::describe($stepId));
             }
 
             // Check for duplicate step IDs
@@ -449,7 +483,7 @@ class DefinitionParser
                     "Step '{$stepId}' has invalid timeout format. Expected format: number followed by s/m/h/d (e.g., '30s', '5m')",
                     $fullDefinition,
                     [
-                        "Invalid timeout: {$stepData['timeout']}",
+                        'Invalid timeout: '.Arr::describe($stepData['timeout']),
                         'Valid formats: "30s", "5m", "2h", "1d"',
                     ]
                 );
@@ -458,7 +492,15 @@ class DefinitionParser
 
         // Validate retry attempts
         if (isset($stepData['retry_attempts'])) {
-            if (! is_int($stepData['retry_attempts']) || $stepData['retry_attempts'] < 0) {
+            if (! is_int($stepData['retry_attempts'])) {
+                throw new InvalidWorkflowDefinitionException(
+                    "Step '{$stepId}' retry_attempts must be an integer",
+                    $fullDefinition,
+                    ['Expected integer for retry_attempts in step '.$stepId.', got: '.get_debug_type($stepData['retry_attempts'])]
+                );
+            }
+
+            if ($stepData['retry_attempts'] < 0) {
                 throw InvalidWorkflowDefinitionException::invalidRetryAttempts($stepData['retry_attempts']);
             }
         }
@@ -484,7 +526,7 @@ class DefinitionParser
 
             foreach ($stepData['conditions'] as $conditionIndex => $condition) {
                 if (! is_string($condition) || empty(trim($condition))) {
-                    throw InvalidWorkflowDefinitionException::invalidCondition($condition, 'Condition cannot be empty.');
+                    throw InvalidWorkflowDefinitionException::invalidCondition(Arr::describe($condition), 'Condition cannot be empty.');
                 }
             }
         }
@@ -499,7 +541,7 @@ class DefinitionParser
      *
      * @param array<string, mixed> $transition The transition definition to validate
      * @param array<string, array<string, mixed>> $steps Available workflow steps
-     * @param int $transitionIndex Index of transition for error context
+     * @param int|string $transitionIndex Index of transition for error context
      *
      * @throws InvalidWorkflowDefinitionException If transition is invalid
      *
@@ -525,7 +567,7 @@ class DefinitionParser
      *
      * @internal Called during definition validation
      */
-    private function validateTransition(array $transition, array $steps, int $transitionIndex): void
+    private function validateTransition(array $transition, array $steps, int|string $transitionIndex): void
     {
         // Validate required 'from' field
         if (! isset($transition['from'])) {
@@ -600,7 +642,7 @@ class DefinitionParser
         // Validate optional condition field
         if (isset($transition['condition'])) {
             if (! is_string($transition['condition']) || empty(trim($transition['condition']))) {
-                throw InvalidWorkflowDefinitionException::invalidCondition($transition['condition'], 'Condition cannot be empty.');
+                throw InvalidWorkflowDefinitionException::invalidCondition(Arr::describe($transition['condition']), 'Condition cannot be empty.');
             }
         }
 

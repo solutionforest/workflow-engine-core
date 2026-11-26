@@ -71,9 +71,17 @@ final class StepExecutionException extends WorkflowException
      */
     public function canRetry(): bool
     {
+        return $this->attemptNumber <= $this->maxRetries();
+    }
+
+    /**
+     * The retry budget configured on the step; anything but an integer means none.
+     */
+    private function maxRetries(): int
+    {
         $maxRetries = $this->step->getConfig()['retry_attempts'] ?? 0;
 
-        return $this->attemptNumber <= $maxRetries;
+        return is_int($maxRetries) ? $maxRetries : 0;
     }
 
     /**
@@ -82,7 +90,7 @@ final class StepExecutionException extends WorkflowException
     public function getUserMessage(): string
     {
         $stepName = $this->step->getId();
-        $actionClass = Arr::classBasename($this->step->getActionClass());
+        $actionClass = Arr::classBasename($this->step->getActionClass() ?? '');
 
         return "The workflow step '{$stepName}' (using {$actionClass}) failed to execute. ".
                'This may be due to invalid input data, external service issues, or configuration problems.';
@@ -94,7 +102,8 @@ final class StepExecutionException extends WorkflowException
     public function getSuggestions(): array
     {
         $suggestions = [];
-        $actionClass = $this->step->getActionClass();
+        // A step without an action has no class name to match against.
+        $actionClass = $this->step->getActionClass() ?? '';
 
         // Basic suggestions
         $suggestions[] = "Verify the action class '{$actionClass}' is properly implemented";
@@ -103,8 +112,7 @@ final class StepExecutionException extends WorkflowException
 
         // Retry-specific suggestions
         if ($this->canRetry()) {
-            $maxRetries = $this->step->getConfig()['retry_attempts'] ?? 0;
-            $remaining = $maxRetries - $this->attemptNumber + 1;
+            $remaining = $this->maxRetries() - $this->attemptNumber + 1;
             $suggestions[] = "This step will be retried automatically ({$remaining} attempts remaining)";
         } elseif (isset($this->step->getConfig()['retry_attempts'])) {
             $suggestions[] = 'All retry attempts have been exhausted';

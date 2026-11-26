@@ -4,6 +4,7 @@ namespace SolutionForest\WorkflowEngine\Exceptions;
 
 use SolutionForest\WorkflowEngine\Core\WorkflowInstance;
 use SolutionForest\WorkflowEngine\Core\WorkflowState;
+use SolutionForest\WorkflowEngine\Support\Arr;
 
 /**
  * Thrown when attempting to perform an invalid workflow state transition.
@@ -110,7 +111,7 @@ final class InvalidWorkflowStateException extends WorkflowException
         $validTransitions = $this->getContextValue('valid_transitions', []);
         $suggestions = [];
 
-        if (! empty($validTransitions)) {
+        if (is_array($validTransitions) && $validTransitions !== [] && Arr::isStringArray($validTransitions)) {
             $validStates = implode(', ', $validTransitions);
             $suggestions[] = "Valid transitions from '{$this->currentState->value}' are: {$validStates}";
         } else {

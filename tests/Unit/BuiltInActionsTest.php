@@ -71,7 +71,7 @@ describe('DelayAction units', function () {
 
         $result = $action->execute(contextWith(['microseconds' => 1000]));
 
-        expect($result->isSuccess())->toBeTrue();
+        expect($result->isSuspended())->toBeTrue();
         expect($result->getData()['delayed_microseconds'])->toBe(1000);
     });
 
